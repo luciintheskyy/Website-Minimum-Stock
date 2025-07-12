@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, {useState, useEffect} from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 export default function MinitokDashboard() {
@@ -15,6 +15,23 @@ export default function MinitokDashboard() {
 
   const [activeSubTab, setActiveSubTab] = useState("Rekap Minimum Stock ONT");
 
+  {/* Last Update Component */}
+  const [lastUpdate, setLastUpdate] = useState(null);
+
+  useEffect(() => {
+    const mockData = {
+      last_update: "2025-07-12T09:59:30Z"
+    };
+
+    const date = new Date(mockData.last_update);
+    const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+      date.getDate()
+    ).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(
+      date.getMinutes()
+    ).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+
+    setLastUpdate(formattedDate);
+  }, []);
 
   return (
     <div className="container-fluid bg-white min-vh-100">
@@ -95,55 +112,84 @@ export default function MinitokDashboard() {
 
       {/* Cards */}
         <div className="row g-3 py-3">
+          {/* Precentage */}
           <div className="col-md-3">
-            <div className="border rounded p-3 bg-white">
-              <div className="text-muted small">Percentage</div>
-              <div className="h4">77,90%</div>
+            <div className="border rounded bg-white px-3 py-3">
+              <div className="text-muted medium mb-1">Percentage</div>
+              <div className="d-flex align-items-center justify-content-between">
+                <div className="h3 mb-0">77,90%</div>
+                <img src="/assets/ChartBar.svg" alt="Chart" style={{ width: "32px", height: "32px" }} />
+              </div>
             </div>
           </div>
+
+          {/* Red Status */}
           <div className="col-md-3">
-            <div className="border rounded p-3 bg-white">
-              <div className="text-muted small">Red Status</div>
-              <div className="h4 text-danger">53</div>
+            <div className="border rounded bg-white px-3 py-3">
+              <div className="text-muted medium mb-1">Red Status</div>
+              <div className="d-flex align-items-center justify-content-between">
+                <div className="h3 mb-0">53</div>
+                <img src="/assets/CautionBell.svg" alt="Chart" style={{ width: "32px", height: "32px" }} />
+              </div>
             </div>
           </div>
+
+          {/* Yellow Status */}
           <div className="col-md-3">
-            <div className="border rounded p-3 bg-white">
-              <div className="text-muted small">Yellow Status</div>
-              <div className="h4 text-warning">159</div>
+            <div className="border rounded bg-white px-3 py-3">
+              <div className="text-muted medium mb-1">Yellow Status</div>
+              <div className="d-flex align-items-center justify-content-between">
+                <div className="h3 mb-0">159</div>
+                <img src="/assets/WarningOctagon.svg" alt="Chart" style={{ width: "32px", height: "32px" }} />
+              </div>
             </div>
           </div>
+
+          {/* Green Status */}
           <div className="col-md-3">
-            <div className="border rounded p-3 bg-white">
-              <div className="text-muted small">Green Status</div>
-              <div className="h4 text-success">349</div>
+            <div className="border rounded bg-white px-3 py-3">
+              <div className="text-muted medium mb-1">Green Status</div>
+              <div className="d-flex align-items-center justify-content-between">
+                <div className="h3 mb-0">349</div>
+                <img src="/assets/WarningOctagon.svg" alt="Chart" style={{ width: "32px", height: "32px" }} />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Last Update */}
-        <p className="text-muted small pb-2">
-          Last Update : 2025-05-02 09:59:30
-        </p>
-
-        {/* Filter & Search */}
-        <div className="d-flex justify-content-between align-items-center py-2">
-          <input
-            type="text"
-            placeholder="Search..."
-            className="form-control w-25"
-          />
-          <div className="d-flex gap-2">
-            <select className="form-select">
-              <option>TREG</option>
-            </select>
-            <select className="form-select">
-              <option>TA CCAN</option>
-            </select>
-            <button className="btn btn-outline-secondary">Export</button>
-            <button className="btn btn-outline-secondary">Upload Data</button>
+        {/* Last Update, Search Bar, Last Update */}
+        <div className="d-flex justify-content-between align-items-center py-3 flex-wrap gap-2">
+          <div className="rounded px-3 py-2 text-dark small" style={{ backgroundColor: "#EEF2F6" }}>
+            Last Update : {lastUpdate}
           </div>
+          
+          <div className="d-flex align-items-center gap-2 ms-auto flex-nowrap">
+            <input type="text" placeholder="Search..." className="form-control" style={{ width: "300px" }}/>
+
+          <select className="form-select" style={{backgroundColor: "#EEF2F6", width: "87px", border: "none"}}>
+            <option>TREG</option>
+          </select>
+          <select className="form-select" style={{backgroundColor: "#EEF2F6", width: "112px", border: "none"}}>
+            <option>TA CCAN</option>
+          </select>
+          
+          <button className="btn d-flex align-items-center justify-content-between px-3 text-dark" style={{ backgroundColor: "#EEF2F6", width: "125px", height: "38px", border: "none"}}>
+            <div className="d-flex align-items-center gap-2">
+              <img src="/assets/TrayArrowUp.svg" alt="Export" style={{ width: "20px", height: "20px" }} />
+              Export
+            </div>
+            <img src="/assets/CaretDownBold.svg" alt="Caret" className="ms-2" style={{ width: "16px", height: "16px" }} />
+          </button>
+
+          <button className="btn d-flex align-items-center justify-content-between px-3 text-dark" style={{ backgroundColor: "#EEF2F6", width: "170px", height: "38px" ,border: "none"}}>
+            <div className="d-flex align-items-center gap-2">
+              <img src="/assets/UploadSimple.svg" alt="Upload Data" style={{ width: "20px", height: "20px" }} />
+                Upload Data
+            </div>
+            <img src="/assets/CaretDownBold.svg" alt="Caret" style={{ width: "16px", height: "16px" }} />
+          </button>
         </div>
+      </div>
 
       {/* === Table === */}
       <div className="p-4 table-responsive">
