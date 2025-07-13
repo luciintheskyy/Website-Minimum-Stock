@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from "react";
+import React, {useState, useEffect, useRef} from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 export default function MinitokDashboard() {
@@ -31,6 +31,56 @@ export default function MinitokDashboard() {
     ).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
 
     setLastUpdate(formattedDate);
+  }, []);
+
+  {/* Action Buttons: Button Export dan Uploud File*/}
+  const [activeDropdown, setActiveDropdown] = useState(null);
+  const exportRef = useRef(null);
+  const uploadRef = useRef(null);
+
+  const toggleDropdown = (type) => {
+    setActiveDropdown((prev) => (prev === type ? null : type));
+  };
+
+  const handleOptionSelect = (option) => {
+    console.log("Selected:", option); // Ganti dengan action sesuai kebutuhan
+    setActiveDropdown(null); // Tutup dropdown setelah pilih
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        exportRef.current &&
+        !exportRef.current.contains(event.target) &&
+        uploadRef.current &&
+        !uploadRef.current.contains(event.target)
+      ) {
+        setActiveDropdown(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const dropdownContainerRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        dropdownContainerRef.current &&
+        !dropdownContainerRef.current.contains(event.target)
+      ) {
+        setActiveDropdown(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   return (
@@ -94,7 +144,7 @@ export default function MinitokDashboard() {
       </header>
 
       {/* === Sub Tab === */}
-      <div className="px-4 pt-2" style={{ backgroundColor: "#EEF2F6"}}>
+      <div className="px-4 pt-2 mb-1" style={{ backgroundColor: "#EEF2F6"}}>
         <div className="d-flex gap-4">
           {["Rekap Minimum Stock ONT", "Report Minimum Stock ONT"].map((tab) => (
             <button
@@ -111,7 +161,7 @@ export default function MinitokDashboard() {
       </div>
 
       {/* Cards */}
-        <div className="row g-3 py-3">
+        <div className="row g-3 py-3 mb-1">
           {/* Precentage */}
           <div className="col-md-3">
             <div className="border rounded bg-white px-3 py-3">
@@ -157,37 +207,54 @@ export default function MinitokDashboard() {
           </div>
         </div>
 
-        {/* Last Update, Search Bar, Last Update */}
-        <div className="d-flex justify-content-between align-items-center py-3 flex-wrap gap-2">
+        {/* Last Update, Search Bar, Action Buttons */}
+        <div className="d-flex justify-content-between align-items-center mt-1 flex-wrap gap-2">
           <div className="rounded px-3 py-2 text-dark small" style={{ backgroundColor: "#EEF2F6" }}>
             Last Update : {lastUpdate}
           </div>
           
-          <div className="d-flex align-items-center gap-2 ms-auto flex-nowrap">
+          <div className="d-flex align-items-center gap-2 ms-auto flex-nowrap" ref={dropdownContainerRef}>
             <input type="text" placeholder="Search..." className="form-control" style={{ width: "300px" }}/>
 
-          <select className="form-select" style={{backgroundColor: "#EEF2F6", width: "87px", border: "none"}}>
+          <select className="form-select" style={{backgroundColor: "#EEF2F6", width: "85px", border: "none"}}>
             <option>TREG</option>
           </select>
           <select className="form-select" style={{backgroundColor: "#EEF2F6", width: "112px", border: "none"}}>
             <option>TA CCAN</option>
           </select>
           
-          <button className="btn d-flex align-items-center justify-content-between px-3 text-dark" style={{ backgroundColor: "#EEF2F6", width: "125px", height: "38px", border: "none"}}>
-            <div className="d-flex align-items-center gap-2">
-              <img src="/assets/TrayArrowUp.svg" alt="Export" style={{ width: "20px", height: "20px" }} />
-              Export
-            </div>
-            <img src="/assets/CaretDownBold.svg" alt="Caret" className="ms-2" style={{ width: "16px", height: "16px" }} />
-          </button>
+          <div className="position-relative">
+            <button onClick={() => toggleDropdown("export")} className="btn d-flex align-items-center justify-content-between px-3 text-dark" style={{backgroundColor: "#EEF2F6", width: "125px", height: "38px", border: "none" }}>
+              <div className="d-flex align-items-center gap-2">
+                <img src="/assets/TrayArrowUp.svg" alt="Export" style={{ width: "20px", height: "20px" }}/>
+                Export
+              </div>
+              <img src="/assets/CaretDownBold.svg" alt="Caret" className="ms-2" style={{ width: "16px", height: "16px" }} />
+            </button>
+            {activeDropdown === 'export' && (
+              <div className="position-absolute bg-white border rounded shadow-sm mt-1 w-100 z-3">
+                <button onClick={() => handleOptionSelect("Export Data")} className="dropdown-item text-start px-3 py-2 small">Export Data</button>
+                <button onClick={() => handleOptionSelect("Export All Data")} className="dropdown-item text-start px-3 py-2 small">Export All Data</button>
+              </div>
+            )}
+          </div>
 
-          <button className="btn d-flex align-items-center justify-content-between px-3 text-dark" style={{ backgroundColor: "#EEF2F6", width: "170px", height: "38px" ,border: "none"}}>
-            <div className="d-flex align-items-center gap-2">
-              <img src="/assets/UploadSimple.svg" alt="Upload Data" style={{ width: "20px", height: "20px" }} />
+          <div className="position-relative">
+            <button onClick={() => toggleDropdown("upload")} className="btn d-flex align-items-center justify-content-between px-3 text-dark" style={{backgroundColor: "#EEF2F6", width: "173px", height: "38px", border: "none" }}>
+              <div className="d-flex align-items-center gap-2">
+                <img src="/assets/UploadSimple.svg" alt="Export" style={{ width: "20px", height: "20px" }}/>
                 Upload Data
-            </div>
-            <img src="/assets/CaretDownBold.svg" alt="Caret" style={{ width: "16px", height: "16px" }} />
-          </button>
+              </div>
+              <img src="/assets/CaretDownBold.svg" alt="Caret" className="ms-2" style={{ width: "16px", height: "16px" }} />
+            </button>
+            {activeDropdown === 'upload' && (
+              <div className="position-absolute bg-white border rounded shadow-sm mt-1 w-102 z-3">
+                <button onClick={() => handleOptionSelect("Upload File Stock")} className="dropdown-item text-start px-3 py-2 small">Upload File Stock</button>
+                <button onClick={() => handleOptionSelect("Upload File Delivery")} className="dropdown-item text-start px-3 py-2 small">Upload File Delivery</button>
+                <button onClick={() => handleOptionSelect("Upload File Minimum Stock")} className="dropdown-item text-start px-3 py-2 small">Upload File Minimum Stock</button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
