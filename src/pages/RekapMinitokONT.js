@@ -1,5 +1,6 @@
 import React, {useState, useEffect, useRef} from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
+import './style.css';
 
 export default function MinitokDashboard() {
   const [notificationCount, setNotificationCount] =useState(3);
@@ -248,7 +249,7 @@ export default function MinitokDashboard() {
               <img src="/assets/CaretDownBold.svg" alt="Caret" className="ms-2" style={{ width: "16px", height: "16px" }} />
             </button>
             {activeDropdown === 'upload' && (
-              <div className="position-absolute bg-white border rounded shadow-sm mt-1 w-102 z-3">
+              <div className="position-absolute bg-white border rounded shadow-sm mt-1 w-102 z-3" style={{ right: 0, minWidth: "100%" }}>
                 <button onClick={() => handleOptionSelect("Upload File Stock")} className="dropdown-item text-start px-3 py-2 small">Upload File Stock</button>
                 <button onClick={() => handleOptionSelect("Upload File Delivery")} className="dropdown-item text-start px-3 py-2 small">Upload File Delivery</button>
                 <button onClick={() => handleOptionSelect("Upload File Minimum Stock")} className="dropdown-item text-start px-3 py-2 small">Upload File Minimum Stock</button>
@@ -259,73 +260,70 @@ export default function MinitokDashboard() {
       </div>
 
       {/* === Table === */}
-      <div className="p-4 table-responsive">
-        <table className="table table-bordered table-sm text-center">
-          <thead className="table-light">
-            <tr>
-              <th rowSpan="2">Warehouse</th>
-              <th colSpan="4">Stock SCMT (A)</th>
-              <th colSpan="2">GAP Stock<br/>(A + C - B)</th>
-              <th colSpan="3">Kebutuhan</th>
-              <th colSpan="3">Minimum Stock<br/>Requirement Retail (B)</th>
-              <th colSpan="2">On Delivery (C)</th>
-            </tr>
-            <tr>
-              <th>Total Retail SB</th>
-              <th>Total Retail DB</th>
-              <th>Total Premium</th>
-              <th>Total ONT</th>
-              <th>Total Premium</th>
-              <th>Total ONT</th>
-              <th>Total Retail</th>
-              <th>Total Premium</th>
-              <th>Total ONT</th>
-              <th>Total Retail</th>
-              <th>Total Premium</th>
-              <th>Total ONT</th>
-              <th>Total Retail</th>
-              <th>Total Premium</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-              <tr key={i}>
-                <td>WH TR TREG {i}</td>
-                <td>61</td>
-                <td>61</td>
-                <td>23</td>
-                <td>84</td>
-                <td>4</td>
-                <td className="bg-success text-white fw-bold">21</td>
-                <td>280</td>
-                <td>156</td>
-                <td>444</td>
-                <td>124</td>
-                <td>91</td>
-                <td>215</td>
-                <td>80</td>
-                <td>72</td>
+      <div className="mt-4 mb-4">
+        <div className="bg-white table-container-rounded">
+          <div className="table-responsive">
+            <table className="table table-bordered table-sm text-center table-custom">
+              <tr className="bg-abu">
+                <th rowSpan="2" style={{ width: "300px" }}>Warehouse</th>
+                <th colSpan="4">Stock SCMT<br/><small style={{ backgroundColor: "transparent" }}>(A)</small></th>
+                <th colSpan="2">GAP Stock<br/><small style={{ backgroundColor: "transparent" }}>(A + C - B)</small></th>
+                <th colSpan="3">Kebutuhan</th>
+                <th colSpan="3">Minimum Stock Requirement Retail<br/><small style={{ backgroundColor: "transparent" }}>(B)</small></th>
+                <th colSpan="2">On Delivery<br/><small style={{ backgroundColor: "transparent" }}>(C)</small></th>
               </tr>
-            ))}
-            <tr className="fw-bold">
-              <td>Total</td>
-              <td>61</td>
-              <td>61</td>
-              <td>23</td>
-              <td>84</td>
-              <td>4</td>
-              <td className="bg-success text-white">21</td>
-              <td>280</td>
-              <td>156</td>
-              <td>444</td>
-              <td>124</td>
-              <td>91</td>
-              <td>215</td>
-              <td>80</td>
-              <td>72</td>
-            </tr>
-          </tbody>
-        </table>
+              <tr className="bg-abu">
+                <th>Total Retail SB</th>
+                <th>Total Retail DB</th>
+                <th>Total Premium</th>
+                <th>Total ONT</th>
+                <th>Total Premium</th>
+                <th>Total ONT</th>
+                <th>Total Retail</th>
+                <th>Total Premium</th>
+                <th>Total ONT</th>
+                <th>Total Retail</th>
+                <th>Total Premium</th>
+                <th>Total ONT</th>
+                <th>Total Retail</th>
+                <th>Total Premium</th>
+              </tr>
+
+              <tbody>
+                {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+                  <tr key={i}>
+                    {[
+                      <td key="warehouse" className="bg-abu">{`WH TR TREG ${i}`}</td>,
+                      <td key="sb">61</td>,
+                      <td key="db">61</td>,
+                      <td key="prem">23</td>,
+                      <td key="ont">84</td>,
+                      <td key="gap-prem">4</td>,
+                      <td key="gap-ont" className="bg-success text-white fw-bold">21</td>,
+                      <td key="k-retail">280</td>,
+                      <td key="k-prem">156</td>,
+                      <td key="k-ont">444</td>,
+                      <td key="ms-retail">124</td>,
+                      <td key="ms-prem">91</td>,
+                      <td key="ms-ont">215</td>,
+                      <td key="deliv-retail">80</td>,
+                      <td key="deliv-prem">72</td>
+                    ]}
+                  </tr>
+                ))}
+
+                {/* Total row */}
+                <tr className="fw-bold">
+                  {[
+                    "Total", 61, 61, 23, 84, 4, 21, 280, 156, 444, 124, 91, 215, 80, 72
+                  ].map((val, idx) => (
+                    <td key={idx} className="bg-abu">{val}</td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   );
