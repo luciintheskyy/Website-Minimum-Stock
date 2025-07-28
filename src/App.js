@@ -1,10 +1,19 @@
-// src/App.js
-import React from "react";
-import MinitokDashboard from "./pages/RekapMinitokONT";
-import 'bootstrap/dist/css/bootstrap.min.css';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import Dashboard from "./pages/Dashboard";
 
-function App() {
-  return <MinitokDashboard />;
+export default function App() {
+  return (
+    <Router>
+      <Routes>
+        {/* Default setelah login → langsung ke Rekap */}
+        <Route path="/" element={<Navigate to="/minitok-ont/rekap" />} />
+        <Route path="/minitok-ont/:subtab" element={<Dashboard />} />
+      </Routes>
+    </Router>
+  );
 }
-
-export default App;
