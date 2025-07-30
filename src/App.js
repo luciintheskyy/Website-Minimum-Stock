@@ -1,3 +1,4 @@
+import React from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -10,9 +11,14 @@ export default function App() {
   return (
     <Router>
       <Routes>
-        {/* Default setelah login → langsung ke Rekap */}
+        {/* Default ke ONT rekap */}
         <Route path="/" element={<Navigate to="/minitok-ont/rekap" />} />
+
+        {/* Minitok ONT */}
         <Route path="/minitok-ont/:subtab" element={<Dashboard />} />
+
+        {/* Minitok AP */}
+        <Route path="/minitok-ap/:subtab" element={<Dashboard />} />
       </Routes>
     </Router>
   );
