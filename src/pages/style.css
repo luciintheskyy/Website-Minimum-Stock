@@ -3,8 +3,8 @@
   background-color: #e3e8ef !important;
 }
 
-.table-container-rounded thead.bg-abu th {
-  background-color: #e3e8ef !important; /* pakai !important biar pasti menang */
+.table-container-rounded thead th {
+  background-color: #e3e8ef !important;
 }
 
 /* Membulatkan hanya sudut luar tabel */
@@ -30,7 +30,11 @@
   background-clip: padding-box;
 }
 
-thead small {
-  font-size: 0.75rem;
-  color: #6c757d;
+/* Styling untuk label (A), (B), (C) di header tabel */
+.table-container-rounded thead small {
+  font-size: 0.85rem !important; /* Lebih besar */
+  color: #000 !important; /* Hitam */
+  font-weight: inherit !important; /* Ikuti ketebalan dari th */
+  display: block; /* Pindah ke baris bawah */
+  margin-top: 2px;
 }

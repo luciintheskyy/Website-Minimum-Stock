@@ -2,14 +2,29 @@ import React, { useState, useEffect, useRef } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./style.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
-import { Tooltip } from "bootstrap";
 
-export default function ReportMinitokAP() {
+import { DateRange } from "react-date-range";
+import { format } from "date-fns";
+import "react-date-range/dist/styles.css";
+import "react-date-range/dist/theme/default.css";
+
+export default function RequestOutbound() {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const dropdownContainerRef = useRef(null);
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
-  const totalData = 539;
+  const totalData = 5;
+
+  // === Date Range State ===
+  const [range, setRange] = useState([
+    {
+      startDate: new Date(2025, 3, 1), // default 1 April 2025
+      endDate: new Date(2025, 3, 30), // default 30 April 2025
+      key: "selection",
+    },
+  ]);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const calendarRef = useRef(null);
 
   const toggleDropdown = (type) => {
     setActiveDropdown((prev) => (prev === type ? null : type));
@@ -20,6 +35,7 @@ export default function ReportMinitokAP() {
     setActiveDropdown(null);
   };
 
+  // klik di luar => tutup dropdown & calendar
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -27,6 +43,9 @@ export default function ReportMinitokAP() {
         !dropdownContainerRef.current.contains(event.target)
       ) {
         setActiveDropdown(null);
+      }
+      if (calendarRef.current && !calendarRef.current.contains(event.target)) {
+        setShowCalendar(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -38,9 +57,98 @@ export default function ReportMinitokAP() {
   const startRange = (currentPage - 1) * entriesPerPage + 1;
   const endRange = Math.min(currentPage * entriesPerPage, totalData);
 
+  // status badge style
+  const renderStatus = (status) => {
+    let style = {
+      padding: "4px 12px",
+      borderRadius: "12px",
+      fontSize: "12px",
+      fontWeight: "500",
+      display: "inline-block",
+    };
+
+    if (status === "On Going") {
+      style.backgroundColor = "#FEF3C7";
+      style.color = "#F5C000";
+    }
+    if (status === "Submitted") {
+      style.backgroundColor = "#DBEAFE";
+      style.color = "#3B82F6";
+    }
+    if (status === "Approved") {
+      style.backgroundColor = "#DCFCE7";
+      style.color = "#22C55E";
+    }
+
+    return <span style={style}>{status}</span>;
+  };
+
+  const rows = [
+    {
+      type: "ONT_FIBERHOME_HG6245N",
+      jenis: "Premium",
+      merk: "Fiberhome",
+      qty: 10,
+      delivery: "Udara",
+      tujuan: "TA WITEL CCAN LAMPUNG (BANDAR LAMPUNG) WH",
+      pic: "Admin",
+      approvedBy: "Admin",
+      time: "2023-11-27 10:43:53",
+      status: "On Going",
+    },
+    {
+      type: "STB_ZTE_B860H_V5.0",
+      jenis: "STB",
+      merk: "ZTE",
+      qty: 5,
+      delivery: "Darat",
+      tujuan: "TA WITEL JAKARTA SELATAN",
+      pic: "Rina",
+      approvedBy: "Andi",
+      time: "2023-11-28 09:12:15",
+      status: "Submitted",
+    },
+    {
+      type: "ONT_HUAWEI_HG8245H",
+      jenis: "Basic",
+      merk: "Huawei",
+      qty: 15,
+      delivery: "Udara",
+      tujuan: "TA WITEL BANDUNG",
+      pic: "Admin",
+      approvedBy: "Admin",
+      time: "2023-11-29 11:20:33",
+      status: "On Going",
+    },
+    {
+      type: "ONT_ZTE_F660",
+      jenis: "Premium",
+      merk: "ZTE",
+      qty: 8,
+      delivery: "Darat",
+      tujuan: "TA WITEL SURABAYA",
+      pic: "Budi",
+      approvedBy: "Siti",
+      time: "2023-11-30 14:45:27",
+      status: "Approved",
+    },
+    {
+      type: "ONT_FIBERHOME_AN5506-04-FG",
+      jenis: "Basic",
+      merk: "Fiberhome",
+      qty: 12,
+      delivery: "Udara",
+      tujuan: "TA WITEL MEDAN",
+      pic: "Agus",
+      approvedBy: "Tono",
+      time: "2023-12-01 08:32:40",
+      status: "Approved",
+    },
+  ];
+
   return (
     <>
-      {/* Search Bar dan Action Buttons */}
+      {/* Search Bar + Filters */}
       <div
         className="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2"
         ref={dropdownContainerRef}
@@ -53,19 +161,25 @@ export default function ReportMinitokAP() {
         />
 
         <div className="d-flex align-items-center gap-2 flex-nowrap ms-auto">
-          {/* Batch Dropdown */}
+          {/* Filters */}
           <div className="position-relative me-2">
             <button
-              onClick={() => toggleDropdown("batch")}
+              onClick={() => toggleDropdown("filters")}
               className="btn d-flex align-items-center justify-content-between px-3 text-dark"
               style={{
                 backgroundColor: "#EEF2F6",
-                width: "90px",
+                width: "120px",
                 height: "38px",
                 border: "none",
               }}
             >
-              <span>Batch</span>
+              <img
+                src="/assets/Sliders.svg"
+                alt="Sliders"
+                className="me-2"
+                style={{ width: "20px", height: "20px" }}
+              />
+              <span>Filters</span>
               <img
                 src="/assets/CaretDownBold.svg"
                 alt="Caret"
@@ -73,37 +187,51 @@ export default function ReportMinitokAP() {
                 style={{ width: "16px", height: "16px" }}
               />
             </button>
-            {activeDropdown === "batch" && (
+            {activeDropdown === "filters" && (
               <div className="position-absolute bg-white border rounded shadow-sm mt-1 w-100 z-3">
                 <button
-                  onClick={() => handleOptionSelect("Batch 1")}
+                  onClick={() => handleOptionSelect("Filter 1")}
                   className="dropdown-item text-start px-3 py-2 small"
                 >
-                  Batch 1
+                  Filter 1
                 </button>
                 <button
-                  onClick={() => handleOptionSelect("Batch 2")}
+                  onClick={() => handleOptionSelect("Filter 2")}
                   className="dropdown-item text-start px-3 py-2 small"
                 >
-                  Batch 2
+                  Filter 2
                 </button>
               </div>
             )}
           </div>
 
-          {/* TREG Dropdown */}
-          <div className="position-relative me-2">
+          {/* Date Range Picker */}
+          <div className="position-relative" ref={calendarRef}>
             <button
-              onClick={() => toggleDropdown("treg")}
               className="btn d-flex align-items-center justify-content-between px-3 text-dark"
               style={{
                 backgroundColor: "#EEF2F6",
-                width: "90px",
+                minWidth: "230px",
                 height: "38px",
                 border: "none",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
               }}
+              onClick={() => setShowCalendar((prev) => !prev)}
             >
-              <span>TREG</span>
+              <img
+                src="/assets/Calendar.svg"
+                alt="Calendar"
+                className="me-2"
+                style={{ width: "20px", height: "20px" }}
+              />
+              <span style={{ flexGrow: 1, textAlign: "left" }}>
+                {`${format(range[0].startDate, "MMM d, yyyy")} - ${format(
+                  range[0].endDate,
+                  "MMM d, yyyy"
+                )}`}
+              </span>
               <img
                 src="/assets/CaretDownBold.svg"
                 alt="Caret"
@@ -111,113 +239,21 @@ export default function ReportMinitokAP() {
                 style={{ width: "16px", height: "16px" }}
               />
             </button>
-            {activeDropdown === "treg" && (
-              <div className="position-absolute bg-white border rounded shadow-sm mt-1 w-100 z-3">
-                {[
-                  "TREG 1",
-                  "TREG 2",
-                  "TREG 3",
-                  "TREG 4",
-                  "TREG 5",
-                  "TREG 6",
-                  "TREG 7",
-                ].map((treg) => (
-                  <button
-                    key={treg}
-                    onClick={() => handleOptionSelect(treg)}
-                    className="dropdown-item text-start px-3 py-2 small"
-                  >
-                    {treg}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
 
-          {/* Export Dropdown */}
-          <div className="position-relative">
-            <button
-              onClick={() => toggleDropdown("export")}
-              className="btn d-flex align-items-center justify-content-between px-3 text-dark"
-              style={{
-                backgroundColor: "#EEF2F6",
-                width: "130px",
-                height: "38px",
-                border: "none",
-              }}
-            >
-              <div className="d-flex align-items-center gap-2">
-                <img
-                  src="/assets/TrayArrowUp.svg"
-                  alt="Export"
-                  style={{ width: "20px", height: "20px" }}
+            {showCalendar && (
+              <div
+                className="position-absolute mt-2 bg-white shadow rounded z-3"
+                style={{ right: 0 }}
+              >
+                <DateRange
+                  editableDateInputs={true}
+                  onChange={(item) => setRange([item.selection])}
+                  moveRangeOnFirstSelection={false}
+                  ranges={range}
                 />
-                Export
-              </div>
-              <img
-                src="/assets/CaretDownBold.svg"
-                alt="Caret"
-                className="ms-2"
-                style={{ width: "16px", height: "16px" }}
-              />
-            </button>
-            {activeDropdown === "export" && (
-              <div className="position-absolute bg-white border rounded shadow-sm mt-1 w-100 z-3">
-                <button
-                  onClick={() => handleOptionSelect("Export Data")}
-                  className="dropdown-item text-start px-3 py-2 small"
-                >
-                  Export All SN
-                </button>
-                <button
-                  onClick={() => handleOptionSelect("Export All Data")}
-                  className="dropdown-item text-start px-3 py-2 small"
-                >
-                  Export Data
-                </button>
               </div>
             )}
           </div>
-
-          {/* Download Template */}
-          <button
-            className="btn d-flex align-items-center justify-content-between px-3 text-dark"
-            style={{
-              backgroundColor: "#EEF2F6",
-              width: "205px",
-              height: "38px",
-              border: "none",
-            }}
-          >
-            <div className="d-flex align-items-center gap-2">
-              <img
-                src="/assets/Download.svg"
-                alt="Export"
-                style={{ width: "20px", height: "20px" }}
-              />
-              Download Template
-            </div>
-          </button>
-
-          {/* Upload Pengiriman */}
-          <button
-            className="btn d-flex align-items-center justify-content-between px-3 text-dark"
-            style={{
-              backgroundColor: "#EEF2F6",
-              width: "200px",
-              height: "38px",
-              border: "none",
-            }}
-          >
-            <div className="d-flex align-items-center gap-2">
-              <img
-                src="/assets/UploadSimple.svg"
-                alt="Export"
-                style={{ width: "20px", height: "20px" }}
-              />
-              Upload Pengiriman
-            </div>
-          </button>
         </div>
       </div>
 
@@ -228,73 +264,32 @@ export default function ReportMinitokAP() {
             <table className="table table-bordered table-sm text-center align-middle">
               <thead className="bg-abu">
                 <tr>
-                  <th
-                    rowSpan="2"
-                    style={{ width: "50px", verticalAlign: "middle" }}
-                  >
-                    No
-                  </th>
-                  <th
-                    rowSpan="2"
-                    style={{ width: "200px", verticalAlign: "middle" }}
-                  >
-                    Type
-                  </th>
-                  <th
-                    rowSpan="2"
-                    style={{ width: "80px", verticalAlign: "middle" }}
-                  >
-                    Qty
-                  </th>
-                  <th colSpan="2">Pengirim</th>
-                  <th colSpan="3">Penerima</th>
-                  <th
-                    rowSpan="2"
-                    style={{ width: "150px", verticalAlign: "middle" }}
-                  >
-                    Tanggal Pengiriman
-                  </th>
-                  <th
-                    rowSpan="2"
-                    style={{ width: "150px", verticalAlign: "middle" }}
-                  >
-                    Tanggal Sampai
-                  </th>
-                  <th
-                    rowSpan="2"
-                    style={{ width: "100px", verticalAlign: "middle" }}
-                  >
-                    Batch
-                  </th>
-                  <th
-                    rowSpan="2"
-                    style={{ width: "100px", verticalAlign: "middle" }}
-                  >
-                    Action
-                  </th>
-                </tr>
-                <tr>
-                  <th>Alamat</th>
+                  <th>Type</th>
+                  <th>Jenis</th>
+                  <th>Merk</th>
+                  <th>Qty</th>
+                  <th>Delivery By</th>
+                  <th>Alamat Tujuan</th>
                   <th>PIC</th>
-                  <th>Alamat</th>
-                  <th>Warehouse</th>
-                  <th>PIC</th>
+                  <th>Approved By</th>
+                  <th>Time Added</th>
+                  <th>Status</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {[...Array(10)].map((_, idx) => (
+                {rows.map((row, idx) => (
                   <tr key={idx}>
-                    <td>{idx + 1}</td>
-                    <td>ONT_FIBERHOME_HG6245N</td>
-                    <td>24</td>
-                    <td>WH FH</td>
-                    <td>FIBERHOME</td>
-                    <td>WH TA</td>
-                    <td>TA WITEL CCAN BANGKA BELITUNG (PANGKAL PINANG) WH</td>
-                    <td>WH TR TREG1</td>
-                    <td>Tanggal Pengiriman</td>
-                    <td>Tanggal Sampai</td>
-                    <td>Batch</td>
+                    <td>{row.type}</td>
+                    <td>{row.jenis}</td>
+                    <td>{row.merk}</td>
+                    <td>{row.qty}</td>
+                    <td>{row.delivery}</td>
+                    <td>{row.tujuan}</td>
+                    <td>{row.pic}</td>
+                    <td>{row.approvedBy}</td>
+                    <td>{row.time}</td>
+                    <td>{renderStatus(row.status)}</td>
                     <td>
                       <div className="d-flex justify-content-center gap-2">
                         <button
@@ -305,8 +300,8 @@ export default function ReportMinitokAP() {
                           }}
                         >
                           <img
-                            src="/assets/NotePencil.svg"
-                            alt="Edit"
+                            src="/assets/ChatTeardropText.svg"
+                            alt="Chat"
                             style={{ width: "20px", height: "20px" }}
                           />
                         </button>
@@ -318,8 +313,8 @@ export default function ReportMinitokAP() {
                           }}
                         >
                           <img
-                            src="/assets/Trash.svg"
-                            alt="Delete"
+                            src="/assets/DotsThreeVertical.svg"
+                            alt="More"
                             style={{ width: "20px", height: "20px" }}
                           />
                         </button>
@@ -364,7 +359,7 @@ export default function ReportMinitokAP() {
               >
                 &lt;
               </button>
-              {[1, 2, 3].map((page) => (
+              {[1].map((page) => (
                 <button
                   key={page}
                   className="btn btn-sm"

@@ -4,6 +4,12 @@ import RekapMinitokONT from "./RekapMinitokONT";
 import ReportMinitokONT from "./ReportMinitokONT";
 import RekapMinitokAP from "./RekapMinitokAP";
 import ReportMinitokAP from "./ReportMinitokAP";
+import RekapMinitokNodeB from "./RekapMinitokNodeB";
+import ReportMinitokNodeB from "./ReportMinitokNodeB";
+import RekapMinitokONTEntherprise from "./RekapMinitokONTEntherprise";
+import ReportMinitokONTEntherprise from "./ReportMinitokONTEntherprise";
+import RequestOutbond from "./RequestOutbond";
+import UserList from "./UserList";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import "./style.css";
@@ -37,6 +43,14 @@ export default function Dashboard() {
       rekap: "Rekap Minimum Stock Access Point",
       report: "Report Minimum Stock Access Point",
     },
+    "Minitok Node B": {
+      rekap: "Rekap Minimum Stock Node B",
+      report: "Report Minimum Stock Node B",
+    },
+    "Minitok ONT Entherprise": {
+      rekap: "Rekap Minimum Stock ONT Entherprise",
+      report: "Report Minimum Stock ONT Entherprise",
+    },
   };
 
   // Ambil subtab & validasi
@@ -45,9 +59,14 @@ export default function Dashboard() {
 
   // Ganti sub-tab → update URL
   const handleSubTabClick = (tab) => {
-    const basePath =
-      activeMenu === "Minitok ONT" ? "/minitok-ont" : "/minitok-ap";
-    navigate(`${basePath}/${tab}`);
+    let basePath = "";
+    if (activeMenu === "Minitok ONT") basePath = "/minitok-ont";
+    else if (activeMenu === "Minitok AP") basePath = "/minitok-ap";
+    else if (activeMenu === "Minitok Node B") basePath = "/minitok-nodeb";
+    else if (activeMenu === "Minitok ONT Entherprise")
+      basePath = "/minitok-ontentherprise";
+
+    if (basePath) navigate(`${basePath}/${tab}`);
   };
 
   // Menu klik
@@ -55,6 +74,9 @@ export default function Dashboard() {
     setActiveMenu(menu);
     if (menu === "Minitok ONT") navigate("/minitok-ont/rekap");
     if (menu === "Minitok AP") navigate("/minitok-ap/rekap");
+    if (menu === "Minitok Node B") navigate("/minitok-nodeb/rekap");
+    if (menu === "Minitok ONT Entherprise")
+      navigate("/minitok-ontentherprise/rekap");
   };
 
   const hasDropdown = (menu) =>
@@ -177,7 +199,10 @@ export default function Dashboard() {
       </header>
 
       {/* === Sub Tab (khusus ONT & AP) === */}
-      {(activeMenu === "Minitok ONT" || activeMenu === "Minitok AP") && (
+      {(activeMenu === "Minitok ONT" ||
+        activeMenu === "Minitok AP" ||
+        activeMenu === "Minitok Node B" ||
+        activeMenu === "Minitok ONT Entherprise") && (
         <div className="px-4 pt-2 mb-1" style={{ backgroundColor: "#EEF2F6" }}>
           <div className="d-flex gap-4">
             {Object.entries(subTabsByMenu[activeMenu]).map(([key, label]) => (
@@ -212,6 +237,18 @@ export default function Dashboard() {
         {activeMenu === "Minitok AP" && currentSubTab === "report" && (
           <ReportMinitokAP />
         )}
+        {activeMenu === "Minitok Node B" && currentSubTab === "rekap" && (
+          <RekapMinitokNodeB />
+        )}
+        {activeMenu === "Minitok Node B" && currentSubTab === "report" && (
+          <ReportMinitokNodeB />
+        )}
+        {activeMenu === "Minitok ONT Entherprise" &&
+          currentSubTab === "rekap" && <RekapMinitokONTEntherprise />}
+        {activeMenu === "Minitok ONT Entherprise" &&
+          currentSubTab === "report" && <ReportMinitokONTEntherprise />}
+        {activeMenu === "Request Outbond" && <RequestOutbond />}
+        {activeMenu === "User List" && <UserList />}
       </>
     </div>
   );

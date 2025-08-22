@@ -4,7 +4,7 @@ import "./style.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { Tooltip } from "bootstrap";
 
-export default function ReportMinitokAP() {
+export default function ReportMinitokNodeB() {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const dropdownContainerRef = useRef(null);
   const [entriesPerPage, setEntriesPerPage] = useState(10);

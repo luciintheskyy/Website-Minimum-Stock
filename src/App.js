@@ -19,6 +19,18 @@ export default function App() {
 
         {/* Minitok AP */}
         <Route path="/minitok-ap/:subtab" element={<Dashboard />} />
+
+        {/* Minitok Node B */}
+        <Route path="/minitok-nodeb/:subtab" element={<Dashboard />} />
+
+        {/* Minitok ONT Entherprise */}
+        <Route path="/minitok-ontentherprise/:subtab" element={<Dashboard />} />
+
+        {/* Minitok Request Outbond */}
+        <Route path="/request-outbond" element={<Dashboard />} />
+
+        {/* Minitok User List */}
+        <Route path="/request-userlist" element={<Dashboard />} />
       </Routes>
     </Router>
   );

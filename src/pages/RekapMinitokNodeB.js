@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./style.css";
 
-export default function RekapMinitokAP() {
+export default function RekapMinitokNodeB() {
   const [lastUpdate, setLastUpdate] = useState(null);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const dropdownContainerRef = useRef(null);
@@ -295,7 +295,7 @@ export default function RekapMinitokAP() {
                 <tr className="bg-abu">
                   <th style={{ width: "300px" }}>Warehouse</th>
                   <th>
-                    Total Stock AP
+                    Total Stock Node B
                     <br />
                     <small>(A)</small>
                   </th>
