@@ -5,93 +5,41 @@ import "./style.css";
 export default function UserList() {
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
-  const totalData = 10;
+  const totalData = 53; // contoh kalau data lebih banyak
 
   const startRange = (currentPage - 1) * entriesPerPage + 1;
   const endRange = Math.min(currentPage * entriesPerPage, totalData);
 
-  const rows = [
-    {
-      username: "ONT_FIBERHOME_HG6245N",
-      password: "Premium",
-      fullName: "Fiberhome",
-      role: "Admin",
-      asal: "Fiberhome",
-      jenisAkun: "Admin",
-    },
-    {
-      username: "ONT_FIBERHOME_HG6245N",
-      password: "Premium",
-      fullName: "Fiberhome",
-      role: "Fiberhome",
-      asal: "Fiberhome",
-      jenisAkun: "Admin",
-    },
-    {
-      username: "ONT_FIBERHOME_HG6245N",
-      password: "Premium",
-      fullName: "Fiberhome",
-      role: "Udara",
-      asal: "Fiberhome",
-      jenisAkun: "Admin",
-    },
-    {
-      username: "ONT_FIBERHOME_HG6245N",
-      password: "Premium",
-      fullName: "Fiberhome",
-      role: "Udara",
-      asal: "Fiberhome",
-      jenisAkun: "Admin",
-    },
-    {
-      username: "ONT_FIBERHOME_HG6245N",
-      password: "Premium",
-      fullName: "Fiberhome",
-      role: "Udara",
-      asal: "Fiberhome",
-      jenisAkun: "Admin",
-    },
-    {
-      username: "ONT_FIBERHOME_HG6245N",
-      password: "Premium",
-      fullName: "Fiberhome",
-      role: "Udara",
-      asal: "Fiberhome",
-      jenisAkun: "Admin",
-    },
-    {
-      username: "ONT_FIBERHOME_HG6245N",
-      password: "Premium",
-      fullName: "Fiberhome",
-      role: "Udara",
-      asal: "Fiberhome",
-      jenisAkun: "Admin",
-    },
-    {
-      username: "ONT_FIBERHOME_HG6245N",
-      password: "Premium",
-      fullName: "Fiberhome",
-      role: "Udara",
-      asal: "Fiberhome",
-      jenisAkun: "Admin",
-    },
-    {
-      username: "ONT_FIBERHOME_HG6245N",
-      password: "Premium",
-      fullName: "Fiberhome",
-      role: "Udara",
-      asal: "Fiberhome",
-      jenisAkun: "Admin",
-    },
-    {
-      username: "ONT_FIBERHOME_HG6245N",
-      password: "Premium",
-      fullName: "Fiberhome",
-      role: "Udara",
-      asal: "Fiberhome",
-      jenisAkun: "Admin",
-    },
+  // Pilihan asal
+  const asalOptions = [
+    "TREG 1",
+    "TREG 2",
+    "TREG 3",
+    "TREG 4",
+    "TREG 5",
+    "TREG 6",
+    "TREG 7",
+    "DID",
+    "Nokia",
+    "Fiberhome",
+    "ZTE",
+    "Huawei",
   ];
+
+  // Data dummy user
+  const rows = Array.from({ length: totalData }, (_, idx) => ({
+    username: `user_${idx + 1}`,
+    password: "********",
+    fullName: `User ${idx + 1}`,
+    role: idx % 2 === 0 ? "Admin" : "User",
+    asal: asalOptions[Math.floor(Math.random() * asalOptions.length)],
+  }));
+
+  // Hitung jumlah halaman
+  const totalPages = Math.ceil(totalData / entriesPerPage);
+
+  // Ambil data untuk halaman aktif
+  const currentRows = rows.slice(startRange - 1, endRange);
 
   return (
     <div className="mt-4 mb-4">
@@ -106,20 +54,18 @@ export default function UserList() {
                 <th>Full Name</th>
                 <th>Role</th>
                 <th>Asal</th>
-                <th>Jenis Akun</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, idx) => (
+              {currentRows.map((row, idx) => (
                 <tr key={idx}>
-                  <td>{idx + 1}</td>
+                  <td>{startRange + idx}</td>
                   <td>{row.username}</td>
                   <td>{row.password}</td>
                   <td>{row.fullName}</td>
                   <td>{row.role}</td>
                   <td>{row.asal}</td>
-                  <td>{row.jenisAkun}</td>
                   <td>
                     <div className="d-flex justify-content-center gap-2">
                       <button
@@ -158,6 +104,7 @@ export default function UserList() {
 
         {/* Pagination */}
         <div className="d-flex justify-content-between align-items-center px-3 py-2">
+          {/* Dropdown jumlah entries */}
           <div>
             <select
               className="form-select form-select-sm"
@@ -174,6 +121,7 @@ export default function UserList() {
             </select>
           </div>
 
+          {/* Tombol halaman */}
           <div className="d-flex align-items-center gap-2">
             <button
               className="btn btn-sm"
@@ -189,22 +137,27 @@ export default function UserList() {
             >
               &lt;
             </button>
-            {[1].map((page) => (
-              <button
-                key={page}
-                className="btn btn-sm"
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid #E3E8EF",
-                  fontWeight: page === currentPage ? "600" : "400",
-                }}
-                onClick={() => setCurrentPage(page)}
-              >
-                {page}
-              </button>
-            ))}
+
+            {[...Array(totalPages)].map((_, i) => {
+              const page = i + 1;
+              return (
+                <button
+                  key={page}
+                  className="btn btn-sm"
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    backgroundColor: "#FFFFFF",
+                    border: "1px solid #E3E8EF",
+                    fontWeight: page === currentPage ? "600" : "400",
+                  }}
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </button>
+              );
+            })}
+
             <button
               className="btn btn-sm"
               style={{
@@ -214,17 +167,20 @@ export default function UserList() {
                 border: "1px solid #E3E8EF",
                 color: "#6c757d",
               }}
-              disabled={currentPage * entriesPerPage >= totalData}
-              onClick={() => setCurrentPage((prev) => prev + 1)}
+              disabled={currentPage === totalPages}
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
             >
               &gt;
             </button>
           </div>
 
+          {/* Info range data */}
           <div
             className="small d-flex align-items-center justify-content-center"
             style={{
-              minWidth: "60px",
+              minWidth: "80px",
               height: "32px",
               backgroundColor: "#FFFFFF",
               border: "1px solid #E3E8EF",
@@ -232,7 +188,7 @@ export default function UserList() {
               color: "#6c757d",
             }}
           >
-            {endRange}-{totalData}
+            {startRange}-{endRange} of {totalData}
           </div>
         </div>
       </div>
