@@ -6,6 +6,8 @@ export default function RekapMinitokONT() {
   const [lastUpdate, setLastUpdate] = useState(null);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const dropdownContainerRef = useRef(null);
+  const [selectedLevel, setSelectedLevel] = useState("treg"); // treg | witel | ta
+  const [selectedWitel, setSelectedWitel] = useState(null);
 
   useEffect(() => {
     const mockData = { last_update: "2025-07-12T09:59:30Z" };
@@ -43,6 +45,129 @@ export default function RekapMinitokONT() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  const tregData = {
+    "WH TR TREG 1": [
+      "WITEL ACEH",
+      "WITEL LAMPUNG BENGKULU",
+      "WITEL RIAU",
+      "WITEL SUMBAGSEL",
+      "WITEL SUMBAR JAMBI",
+      "WITEL SUMUT",
+    ],
+  };
+
+  const witelData = {
+    "WITEL ACEH": [
+      "TA SO CCAN BANDA ACEH WH",
+      "TA SO CCAN LANGSA WH",
+      "TA SO CCAN LHOKSEUMAWE WH",
+      "TA SO CCAN MEULABOH WH",
+      "TA SO CCAN TAKENGON WH",
+      "TA SO CCAN TAPAKTUAN WH",
+      "TA WITEL CCAN NAD (ACEH) WH",
+    ],
+
+    "WITEL LAMPUNG BENGKULU": [
+      "TA SO CCAN BENGKULU WH",
+      "TA SO CCAN CURUP WH",
+      "TA SO CCAN IPUH WH",
+      "TA SO CCAN KOTA BUMI WH",
+      "TA SO CCAN LAMPUNG WH",
+      "TA SO CCAN LIWA WH",
+      "TA SO CCAN MANNA WH",
+      "TA SO CCAN METRO WH",
+      "TA SO CCAN UNIT 2 WH",
+      "TA WITEL CCAN BENGKULU (BENGKULU) WH",
+      "TA WITEL CCAN LAMPUNG (BANDAR LAMPUNG0 WH",
+    ],
+
+    "WITEL RIAU": [
+      "TA SO CCAN ARENGKA WH",
+      "TA SO BATAM CENTRE WH",
+      "TA SO CCAN BATAM WH",
+      "TA SO CCAN DUMAI WH",
+      "TA SO CCAN DURI WH",
+      "TA SO CCAN PEKANBARU WH",
+      "TA SO CCAN RENGAT WH",
+      "TA SO CCAN RUMBAI WH",
+      "TA SO CCAN SAGULUNG WH",
+      "TA SO CCAN TANJUNG BALAI KARIMUN WH",
+      "TA SO CCAN TANJUNG PINANG WH",
+      "TA SO CCAN TEMBILAHAN WH",
+      "TA SO CCAN UJUNG BATU WH",
+      "TA WITEL CCAN RIAU DARATAN (PEKANBARU) WH",
+      "TA WITEL CCAN RIAU KEPULAUAN (BATAM) WH",
+    ],
+
+    "WITEL SUMBAGSEL": [
+      "TA SO CCAN BATURAJA WH",
+      "TA SO CCAN KAYUAGUNG WH",
+      "TA SO CCAN KENTEN UJUNG WH",
+      "TA SO CCAN KOBA WH",
+      "TA SO CCAN LAHAT WH",
+      "TA SO CCAN LUBUK LINGGAU WH",
+      "TA SO CCAN MENTOK WH",
+      "TA SO CCAN MUARA ENIM",
+      "TA SO CCAN PALEMBANG CENTRUM WH",
+      "TA SO CCAN PANGKALPINANG WH",
+      "TA SO CCAN PRABUMULIH WH",
+      "TA SO CCAN SEBRANG ULU WH",
+      "TA SO CCAN SEKAYU WH",
+      "TA SO CCAN SUNGAI LIAT WH",
+      "TA SO CCAN TALANG KELAPA WH",
+      "TA SO CCAN TANJUNG PANDAN WH",
+      "TA WITEL CCAN BANGKA BELITUNG (PANGKAL PINANG) WH",
+      "TA WITEL CCAN SUMATERA SELATAN (PALEMBANG) WH",
+    ],
+
+    "WITEL SUMBAR JAMBI": [
+      "TA SO CCAN BUKITTINGGI WH",
+      "TA SO CCAN JAMBI WH",
+      "TA SO CCAN MUARA BUNGO WH",
+      "TA SO CCAN PADANG WH",
+      "TA SO CCAN PAYAKUMBUH WH",
+      "TA SO CCAN SAROLANGUN WH",
+      "TA SO CCAN SOLOK WH",
+      "TA SO CCAN ULAKARANG WH",
+      "TA WITEL CCAN JAMBI WH",
+      "TA WITEL CCAN SUMATERA BARAT (PADANG) WH",
+    ],
+
+    "WITEL SUMUT": [
+      "TA SO CCAN BINJAI WH",
+      "TA SO CCAN CINTA DAMAI WH",
+      "TA SO CCAN KABANJAHE WH",
+      "TA SO CCAN KISARAN WH",
+      "TA SO CCAN LUBUK PAKAM WH",
+      "TA SO CCAN MEDAN CENTRUM WH",
+      "TA SO CCAN PADANG BULAN WH",
+      "TA SO CCAN PADANG SIDEMPUAN WH",
+      "TA SO CCAN PEMATANGSIANTAR WH",
+      "TA SO CCAN PULO BRAYAN WH",
+      "TA SO CCAN RANTAU PRAPAT WH",
+      "TA SO CCAN SIBOLGA WH",
+      "TA SO CCAN SIMPANG LIMUN WH",
+      "TA SO CCAN SUKA RAMAI WH",
+      "TA SO CCAN TANJUNG MORAWA WH",
+      "TA SO CCAN TANJUNG MULIA WH",
+      "TA WITEL CCAN SUMUT BARAT (MEDAN) WH",
+      "TA WITEL CCAN SUMUT TIMUR (PEMATANG SIANTAR) WH",
+    ],
+  };
+
+  const randomVal = (min, max) =>
+    Math.floor(Math.random() * (max - min + 1)) + min;
+
+  // Ambil data sesuai level
+  let warehouses = [];
+  if (selectedLevel === "treg") {
+    warehouses = Object.keys(tregData);
+  } else if (selectedLevel === "witel" && selectedWitel) {
+    warehouses = tregData[selectedWitel];
+  } else if (selectedLevel === "ta" && selectedWitel) {
+    warehouses = witelData[selectedWitel] || [];
+  }
 
   return (
     <>
@@ -388,63 +513,60 @@ export default function RekapMinitokONT() {
               </tr>
 
               <tbody>
-                {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-                  <tr key={i}>
-                    {[
-                      <td
-                        key="warehouse"
-                        className="bg-abu"
-                      >{`WH TR TREG ${i}`}</td>,
-                      <td key="sb">61</td>,
-                      <td key="db">61</td>,
-                      <td key="prem">23</td>,
-                      <td key="ont">84</td>,
-                      <td key="gap-prem">4</td>,
-                      <td
-                        key="gap-ont"
-                        className="bg-success text-white fw-bold"
-                      >
-                        21
-                      </td>,
-                      <td key="k-retail">280</td>,
-                      <td key="k-prem">156</td>,
-                      <td key="k-ont">444</td>,
-                      <td key="ms-retail">124</td>,
-                      <td key="ms-prem">91</td>,
-                      <td key="ms-ont">215</td>,
-                      <td key="deliv-retail">80</td>,
-                      <td key="deliv-prem">72</td>,
-                    ]}
+                {warehouses.map((wh, i) => (
+                  <tr
+                    key={i}
+                    onClick={() => {
+                      if (selectedLevel === "treg") {
+                        setSelectedWitel(wh);
+                        setSelectedLevel("witel");
+                      } else if (selectedLevel === "witel") {
+                        setSelectedWitel(wh);
+                        setSelectedLevel("ta");
+                      }
+                    }}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <td className="bg-abu fw-bold">{wh}</td>
+                    <td>{randomVal(50, 150)}</td>
+                    <td>{randomVal(50, 150)}</td>
+                    <td>{randomVal(20, 80)}</td>
+                    <td>{randomVal(80, 200)}</td>
+                    <td>{randomVal(5, 30)}</td>
+                    <td className="bg-success text-white fw-bold">
+                      {randomVal(10, 50)}
+                    </td>
+                    <td>{randomVal(200, 500)}</td>
+                    <td>{randomVal(100, 300)}</td>
+                    <td>{randomVal(300, 600)}</td>
+                    <td>{randomVal(100, 200)}</td>
+                    <td>{randomVal(50, 150)}</td>
+                    <td>{randomVal(150, 300)}</td>
+                    <td>{randomVal(50, 150)}</td>
+                    <td>{randomVal(50, 150)}</td>
                   </tr>
                 ))}
-
-                {/* Total row */}
-                <tr className="fw-bold">
-                  {[
-                    "Total",
-                    61,
-                    61,
-                    23,
-                    84,
-                    4,
-                    21,
-                    280,
-                    156,
-                    444,
-                    124,
-                    91,
-                    215,
-                    80,
-                    72,
-                  ].map((val, idx) => (
-                    <td key={idx} className="bg-abu">
-                      {val}
-                    </td>
-                  ))}
-                </tr>
               </tbody>
             </table>
           </div>
+          {/* Tombol back biar bisa naik level */}
+          {selectedLevel !== "treg" && (
+            <div className="px-3 py-2">
+              <button
+                className="btn btn-sm btn-secondary"
+                onClick={() => {
+                  if (selectedLevel === "ta") {
+                    setSelectedLevel("witel");
+                  } else if (selectedLevel === "witel") {
+                    setSelectedLevel("treg");
+                    setSelectedWitel(null);
+                  }
+                }}
+              >
+                ← Back
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </>
