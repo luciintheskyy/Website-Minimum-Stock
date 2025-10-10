@@ -1,3 +1,69 @@
+/* Header: Fixed di top */
+.dashboard-header {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 1000;
+  background-color: white;
+}
+
+/* Sub-Tab: Sticky di bawah header */
+.dashboard-subtab {
+  position: sticky !important;
+  top: 98px;
+  z-index: 999;
+  background-color: #eef2f6;
+}
+
+/* Konten Utama: Padding-top dynamic */
+.dashboard-content {
+  padding-top: 100px;
+  min-height: calc(100vh - 100px);
+  overflow-y: auto;
+}
+.dashboard-content.with-subtab {
+  padding-top: 100px;
+  min-height: calc(100vh - 100px);
+}
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboard-header {
+    padding: 0 1rem;
+  }
+
+  .dashboard-subtab {
+    top: 70px;
+    padding: 0 1rem;
+  }
+
+  .dashboard-content {
+    padding-top: 70px;
+  }
+
+  .dashboard-content.with-subtab {
+    padding-top: 120px;
+  }
+}
+
+/* Override Bootstrap form-control focus ke merah #CB3A31 */
+.search-focused {
+  border-color: #cb3a31 !important; /* Border merah 2px */
+  box-shadow: 0 0 0 0.2rem rgba(203, 58, 49, 0.25) !important; /* Shadow merah */
+}
+/* Pastikan :focus juga merah (untuk kompatibilitas) */
+.search-focused:focus {
+  border-color: #cb3a31 !important;
+  box-shadow: 0 0 0 0.2rem rgba(203, 58, 49, 0.25) !important;
+  outline: none; /* Hilangkan outline default jika ada */
+}
+/* Base style untuk non-focus (opsional, agar konsisten) */
+.form-control:not(.search-focused) {
+  border-color: #ced4da; /* Abu-abu default */
+  box-shadow: none;
+}
+
 /* Warna latar abu untuk heading dan total row */
 .bg-abu {
   background-color: #e3e8ef !important;

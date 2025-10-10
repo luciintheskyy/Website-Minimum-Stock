@@ -2,30 +2,67 @@ import React, { useState, useEffect, useRef } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./style.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
-import { Tooltip } from "bootstrap";
 
 export default function ReportMinitokONT() {
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const dropdownContainerRef = useRef(null);
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const totalData = 539;
+  const [selectedTregs, setSelectedTregs] = useState([
+    "TREG 1",
+    "TREG 2",
+    "TREG 3",
+    "TREG 4",
+    "TREG 5",
+  ]);
 
   const toggleDropdown = (type) => {
     setActiveDropdown((prev) => (prev === type ? null : type));
   };
 
+  const handleTregCheckboxToggle = (tregOption) => {
+    setSelectedTregs((prev) => {
+      const isSelected = prev.includes(tregOption);
+      let newSelected;
+      if (isSelected) {
+        newSelected = prev.filter((item) => item !== tregOption); // Uncheck
+      } else {
+        newSelected = [...prev, tregOption]; // Check
+      }
+      // Sort urutan TREG terkecil ke terbesar (1,2,3,4,5,6,7)
+      newSelected.sort(
+        (a, b) =>
+          parseInt(a.replace("TREG ", "")) - parseInt(b.replace("TREG ", ""))
+      );
+      return newSelected;
+    });
+    console.log("TREG toggled:", tregOption, "Dropdown remains open");
+  };
+
   const handleOptionSelect = (option) => {
     console.log("Selected:", option);
-    setActiveDropdown(null);
+    setActiveDropdown(null); // Tutup dropdown
   };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
+      console.log(
+        "Click outside detected on:",
+        event.target.tagName,
+        event.target.className
+      ); // Debug: Lihat elemen yang diklik (hapus setelah test)
+      const isClickOnDropdownItem = event.target.closest(".dropdown-item");
+      const isClickOnTrigger = false; // Cek jika klik trigger active (manual check)
+      // FIX: Tutup jika klik di luar ref ATAU klik di dalam ref tapi bukan dropdown-item dan bukan trigger active
       if (
-        dropdownContainerRef.current &&
-        !dropdownContainerRef.current.contains(event.target)
+        !dropdownContainerRef.current.contains(event.target) || // Luar seluruh bar
+        (dropdownContainerRef.current.contains(event.target) && // Dalam bar
+          !isClickOnDropdownItem && // Bukan opsi dropdown
+          !isClickOnTrigger) // Bukan trigger button active
       ) {
+        console.log("Closing dropdown (outside or other button)"); // Debug
         setActiveDropdown(null);
       }
     };
@@ -33,7 +70,7 @@ export default function ReportMinitokONT() {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [activeDropdown]); // FIX: Tambah dependency activeDropdown agar re-run jika ganti
 
   const startRange = (currentPage - 1) * entriesPerPage + 1;
   const endRange = Math.min(currentPage * entriesPerPage, totalData);
@@ -48,21 +85,53 @@ export default function ReportMinitokONT() {
         <input
           type="text"
           placeholder="Search..."
-          className="form-control"
-          style={{ width: "300px" }}
+          className={`form-control ${isSearchFocused ? "search-focused" : ""}`} // Dari perbaikan sebelumnya (untuk border merah)
+          style={{
+            width: "300px",
+            transition:
+              "border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out",
+          }}
+          onFocus={(e) => {
+            // FIX: Tambah param (e) untuk akses e.stopPropagation()
+            setIsSearchFocused(true); // State untuk border merah
+            setActiveDropdown(null); // TUTUP SEMUA DROPDOWN OTOMATIS
+            e.stopPropagation(); // Cegah bubble ke handleClickOutside
+            console.log("Search focused: Dropdown closed"); // Test: Cek console
+          }}
+          onBlur={() => {
+            setIsSearchFocused(false); // Reset border
+            console.log("Search blurred"); // Test
+          }}
+          // Opsional: Tambah onChange jika ada logic search (misal filter tabel)
+          // onChange={(e) => handleSearch(e.target.value)}
         />
 
-        <div className="d-flex align-items-center gap-2 flex-nowrap ms-auto">
-          {/* Batch Dropdown */}
-          <div className="position-relative me-2">
+        <div className="d-flex align-items-center gap-2 flex-nowrap ms-auto order-3">
+          {/* Dropdown Batch (sama seperti kode Anda, simple – sekarang pakai handleOptionSelect) */}
+          <div className="position-relative me-2 batch-dropdown">
             <button
-              onClick={() => toggleDropdown("batch")}
-              className="btn d-flex align-items-center justify-content-between px-3 text-dark"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleDropdown("batch");
+              }}
+              className="btn d-flex align-items-center justify-content-between px-2 text-dark custom-btn"
               style={{
                 backgroundColor: "#EEF2F6",
-                width: "90px",
+                width: "80px",
                 height: "38px",
                 border: "none",
+                outline: "none",
+                transition:
+                  "border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out",
+              }}
+              onFocus={(e) => {
+                e.target.style.border = "1px solid #CB3A31";
+                e.target.style.boxShadow =
+                  "0 0 0 0.2rem rgba(203, 58, 49, 0.25)";
+              }}
+              onBlur={(e) => {
+                e.target.style.border = "none";
+                e.target.style.boxShadow = "none";
               }}
             >
               <span>Batch</span>
@@ -74,19 +143,55 @@ export default function ReportMinitokONT() {
               />
             </button>
             {activeDropdown === "batch" && (
-              <div className="position-absolute bg-white border rounded shadow-sm mt-1 w-100 z-3">
-                <button
-                  onClick={() => handleOptionSelect("Batch 1")}
-                  className="dropdown-item text-start px-3 py-2 small"
-                >
-                  Batch 1
-                </button>
-                <button
-                  onClick={() => handleOptionSelect("Batch 2")}
-                  className="dropdown-item text-start px-3 py-2 small"
-                >
-                  Batch 2
-                </button>
+              <div
+                className="position-absolute bg-white border rounded shadow-sm mt-1 w-100 z-3"
+                style={{
+                  minWidth: "172px", // TAMBAHAN: Lebar minimal 250px (cukup untuk opsi panjang)
+                  width: "auto", // Auto-adjust jika konten lebih lebar
+                  left: 0, // Align kanan agar tidak overlap button kiri
+                }}
+              >
+                {[
+                  "3400 RETAIL HUAWEI",
+                  "4817 RETAIL HUAWEI",
+                  "NODE B ZTE SEPTEMBER",
+                  "NODE B 550 FH",
+                  "RETAIL 12786",
+                  "RETAIL 12786, TUF",
+                  "RETAIL ST KE CPP",
+                  "SENDIRI",
+                  "ST KE CPP",
+                ].map((option, i) => (
+                  <button
+                    key={i}
+                    className="dropdown-item text-start px-2 py-2 small custom-hover"
+                    style={{
+                      cursor: "pointer",
+                      transition:
+                        "color 0.15s ease-in-out, background-color 0.15s ease-in-out",
+                      width: "100%",
+                      textAlign: "left",
+                      whiteSpace: "nowrap", // TAMBAHAN: No wrap
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation(); // FIX: Cegah bubble ke document
+                      handleOptionSelect(option); // FIX: Syntax benar (no koma kosong, no e/type)
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = "#CB3A31"; // Hover teks merah
+                      e.currentTarget.style.backgroundColor = "#f8f9fa";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = ""; // Reset
+                      e.currentTarget.style.backgroundColor = "";
+                    }}
+                    title={option} // TAMBAHAN: Tooltip full text
+                  >
+                    {option}
+                  </button>
+                ))}
               </div>
             )}
           </div>
@@ -94,13 +199,28 @@ export default function ReportMinitokONT() {
           {/* TREG Dropdown */}
           <div className="position-relative me-2">
             <button
-              onClick={() => toggleDropdown("treg")}
-              className="btn d-flex align-items-center justify-content-between px-3 text-dark"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleDropdown("treg");
+              }}
+              className="btn d-flex align-items-center justify-content-between px-2 text-dark custom-btn"
               style={{
                 backgroundColor: "#EEF2F6",
-                width: "90px",
+                width: "80px",
                 height: "38px",
                 border: "none",
+                outline: "none",
+                transition:
+                  "border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out",
+              }}
+              onFocus={(e) => {
+                e.target.style.border = "1px solid #CB3A31";
+                e.target.style.boxShadow =
+                  "0 0 0 0.2rem rgba(203, 58, 49, 0.25)";
+              }}
+              onBlur={(e) => {
+                e.target.style.border = "1px solid #dee2e6";
+                e.target.style.boxShadow = "none";
               }}
             >
               <span>TREG</span>
@@ -112,24 +232,67 @@ export default function ReportMinitokONT() {
               />
             </button>
             {activeDropdown === "treg" && (
-              <div className="position-absolute bg-white border rounded shadow-sm mt-1 w-100 z-3">
-                {[
-                  "TREG 1",
-                  "TREG 2",
-                  "TREG 3",
-                  "TREG 4",
-                  "TREG 5",
-                  "TREG 6",
-                  "TREG 7",
-                ].map((treg) => (
-                  <button
-                    key={treg}
-                    onClick={() => handleOptionSelect(treg)}
-                    className="dropdown-item text-start px-3 py-2 small"
-                  >
-                    {treg}
-                  </button>
-                ))}
+              <div
+                className="position-absolute bg-white border rounded shadow-sm mt-1 w-100 z-3"
+                style={{
+                  minWidth: "84px", // TAMBAHAN: Lebar minimal 250px (cukup untuk opsi panjang)
+                  width: "auto", // Auto-adjust jika konten lebih lebar
+                  left: 0, // Align kanan agar tidak overlap button kiri
+                }}
+              >
+                {["1", "2", "3", "4", "5"].map((num) => {
+                  const tregOption = `TREG ${num}`;
+                  const isChecked = selectedTregs.includes(tregOption);
+                  return (
+                    <div
+                      key={num}
+                      className="dropdown-item px-2 py-2 small d-flex align-items-center custom-hover"
+                      style={{
+                        cursor: "pointer",
+                        transition:
+                          "color 0.15s ease-in-out, background-color 0.15s ease-in-out",
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = "#CB3A31";
+                        e.currentTarget.style.backgroundColor = "#f8f9fa";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = "";
+                        e.currentTarget.style.backgroundColor = "";
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        id={`treg-${num}`}
+                        checked={isChecked}
+                        onChange={(e) => {
+                          // FIX: Tambah param (e) – hilangkan error 'e' undefined
+                          e.stopPropagation(); // Sekarang e defined
+                          handleTregCheckboxToggle(tregOption);
+                        }}
+                        className="me-2 custom-checkbox"
+                        style={{
+                          cursor: "pointer",
+                          accentColor: "#CB3A31", // Checkbox merah seperti acuan
+                        }}
+                      />
+                      <label
+                        htmlFor={`treg-${num}`}
+                        className="mb-0 w-100"
+                        style={{ cursor: "pointer" }}
+                        onMouseEnter={(e) => {
+                          e.target.style.color = "#CB3A31";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.color = "";
+                        }}
+                      >
+                        TREG {num}
+                      </label>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -137,13 +300,28 @@ export default function ReportMinitokONT() {
           {/* Export Dropdown */}
           <div className="position-relative">
             <button
-              onClick={() => toggleDropdown("export")}
-              className="btn d-flex align-items-center justify-content-between px-3 text-dark"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleDropdown("export");
+              }}
+              className="btn d-flex align-items-center justify-content-between px-2 text-dark custom-btn"
               style={{
                 backgroundColor: "#EEF2F6",
-                width: "130px",
+                width: "114px",
                 height: "38px",
                 border: "none",
+                outline: "none",
+                transition:
+                  "border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out",
+              }}
+              onFocus={(e) => {
+                e.target.style.border = "1px solid #CB3A31";
+                e.target.style.boxShadow =
+                  "0 0 0 0.2rem rgba(203, 58, 49, 0.25)";
+              }}
+              onBlur={(e) => {
+                e.target.style.border = "1px solid #dee2e6";
+                e.target.style.boxShadow = "none";
               }}
             >
               <div className="d-flex align-items-center gap-2">
@@ -162,37 +340,74 @@ export default function ReportMinitokONT() {
               />
             </button>
             {activeDropdown === "export" && (
-              <div className="position-absolute bg-white border rounded shadow-sm mt-1 w-100 z-3">
-                <button
-                  onClick={() => handleOptionSelect("Export Data")}
-                  className="dropdown-item text-start px-3 py-2 small"
-                >
-                  Export All SN
-                </button>
-                <button
-                  onClick={() => handleOptionSelect("Export All Data")}
-                  className="dropdown-item text-start px-3 py-2 small"
-                >
-                  Export Data
-                </button>
+              <div
+                className="position-absolute bg-white border rounded shadow-sm mt-1 w-100 z-3"
+                style={{
+                  minWidth: "114px", // TAMBAHAN: Lebar minimal 250px (cukup untuk opsi panjang)
+                  width: "auto", // Auto-adjust jika konten lebih lebar
+                }}
+              >
+                {["Export Data", "Export All SN"].map((option, i) => (
+                  <button
+                    key={i}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOptionSelect(option); // Console.log, tidak ubah tabel
+                    }}
+                    className="dropdown-item text-start px-2 py-2 small custom-hover"
+                    style={{
+                      cursor: "pointer",
+                      transition:
+                        "color 0.15s ease-in-out, background-color 0.15s ease-in-out",
+                      width: "100%",
+                      textAlign: "left",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = "#CB3A31"; // Hover teks merah
+                      e.currentTarget.style.backgroundColor = "#f8f9fa";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = ""; // Reset
+                      e.currentTarget.style.backgroundColor = "";
+                    }}
+                  >
+                    {option}
+                  </button>
+                ))}
               </div>
             )}
           </div>
 
           {/* Download Template */}
           <button
-            className="btn d-flex align-items-center justify-content-between px-3 text-dark"
+            className="btn d-flex align-items-center justify-content-between px-2 text-dark"
             style={{
               backgroundColor: "#EEF2F6",
-              width: "205px",
+              width: "188px",
               height: "38px",
               border: "none",
+              border: "none",
+              outline: "none",
+              transition:
+                "border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out",
+            }}
+            onClick={() => {
+              setActiveDropdown(null); // FIX: Tutup dropdown manapun
+              console.log("Download Template clicked"); // Dummy logic
+            }}
+            onFocus={(e) => {
+              e.target.style.border = "1px solid #CB3A31";
+              e.target.style.boxShadow = "0 0 0 0.2rem rgba(203, 58, 49, 0.25)";
+            }}
+            onBlur={(e) => {
+              e.target.style.border = "1px solid #dee2e6";
+              e.target.style.boxShadow = "none";
             }}
           >
             <div className="d-flex align-items-center gap-2">
               <img
                 src="/assets/Download.svg"
-                alt="Export"
+                alt="Download"
                 style={{ width: "20px", height: "20px" }}
               />
               Download Template
@@ -201,18 +416,34 @@ export default function ReportMinitokONT() {
 
           {/* Upload Pengiriman */}
           <button
-            className="btn d-flex align-items-center justify-content-between px-3 text-dark"
+            className="btn d-flex align-items-center justify-content-between px-2 text-dark"
             style={{
               backgroundColor: "#EEF2F6",
-              width: "200px",
+              width: "182px",
               height: "38px",
               border: "none",
+              border: "none",
+              outline: "none",
+              transition:
+                "border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out",
+            }}
+            onClick={() => {
+              setActiveDropdown(null); // FIX: Tutup dropdown manapun
+              console.log("Download Template clicked"); // Dummy logic
+            }}
+            onFocus={(e) => {
+              e.target.style.border = "1px solid #CB3A31";
+              e.target.style.boxShadow = "0 0 0 0.2rem rgba(203, 58, 49, 0.25)";
+            }}
+            onBlur={(e) => {
+              e.target.style.border = "1px solid #dee2e6";
+              e.target.style.boxShadow = "none";
             }}
           >
             <div className="d-flex align-items-center gap-2">
               <img
                 src="/assets/UploadSimple.svg"
-                alt="Export"
+                alt="Upload"
                 style={{ width: "20px", height: "20px" }}
               />
               Upload Pengiriman
@@ -332,7 +563,7 @@ export default function ReportMinitokONT() {
           </div>
 
           {/* Pagination */}
-          <div className="d-flex justify-content-between align-items-center px-3 py-2">
+          <div className="d-flex justify-content-between align-items-center px-2 py-2">
             <div>
               <select
                 className="form-select form-select-sm"

@@ -57,6 +57,12 @@ export default function Dashboard() {
   const validSubTabs = ["rekap", "report"];
   const currentSubTab = validSubTabs.includes(subtab) ? subtab : "rekap";
 
+  const hasSubTab =
+    activeMenu === "Minitok ONT" ||
+    activeMenu === "Minitok AP" ||
+    activeMenu === "Minitok Node B" ||
+    activeMenu === "Minitok ONT Entherprise";
+
   // Ganti sub-tab → update URL
   const handleSubTabClick = (tab) => {
     let basePath = "";
@@ -124,107 +130,110 @@ export default function Dashboard() {
 
   return (
     <div className="container-fluid bg-white min-vh-100">
-      {/* === Header === */}
-      <header className="d-flex justify-content-between align-items-center bg-white px-4 py-4">
-        {/* LOGO Minimum Stok */}
-        <div className="d-flex align-items-center gap-2">
-          <img
-            src="/assets/LogoMinitok.svg"
-            alt="Logo Minitok"
-            className="me-2"
-            style={{ height: "50px" }}
-          />
-        </div>
-
-        {/* Menu Buttons */}
-        <div className="d-flex align-items-center gap-2">
-          {menus.map((menu) => (
-            <button
-              key={menu}
-              onClick={() => handleMenuClick(menu)}
-              className={`btn border-white fw-medium d-flex align-items-center ${
-                activeMenu === menu ? "text-danger" : "text-dark"
-              }`}
-              style={{
-                backgroundColor: activeMenu === menu ? "#EEF2F6" : "white",
-              }}
-            >
-              <span>{menu}</span>
-
-              {hasDropdown(menu) && (
-                <img
-                  src={
-                    activeMenu === menu
-                      ? "/assets/CaretDownRedBold.svg"
-                      : "/assets/CaretDownBold.svg"
-                  }
-                  alt="Caret"
-                  style={{ width: "20px", height: "20px", marginLeft: "6px" }}
-                />
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/*Notification & Profile */}
-        <div className="d-flex align-items-center" style={{ gap: "8px" }}>
-          <div className="position-relative">
-            <button
-              className="btn btn-light p-2 d-flex justify-content-center align-items-center"
-              style={{ backgroundColor: "white", borderColor: "white" }}
-            >
-              <img
-                src="/assets/Bell.svg"
-                alt="Notifokasi"
-                style={{ width: "24px", height: "24px" }}
-              />
-            </button>
-
-            {notificationCount > 0 && (
-              <span
-                className="position-absolute badge rounded-pill bg-danger"
-                style={{ top: "2px", right: "2px", fontSize: "0.6rem" }}
-              >
-                {notificationCount}
-              </span>
-            )}
+      {/* === Header (Fixed di Top) === */}
+      <header className="dashboard-header">
+        <div className="d-flex justify-content-between align-items-center bg-white px-4 py-4">
+          {/* LOGO Minimum Stok */}
+          <div className="d-flex align-items-center gap-2">
+            <img
+              src="/assets/LogoMinitok.svg"
+              alt="Logo Minitok"
+              className="me-2"
+              style={{ height: "50px" }}
+            />
           </div>
 
-          <img
-            src="/assets/ProfilePicture.svg"
-            alt="Profile Picture"
-            style={{ width: "50px", height: "50px" }}
-          />
+          {/* Menu Buttons */}
+          <div className="d-flex align-items-center gap-2">
+            {menus.map((menu) => (
+              <button
+                key={menu}
+                onClick={() => handleMenuClick(menu)}
+                className={`btn border-white fw-medium d-flex align-items-center ${
+                  activeMenu === menu ? "text-danger" : "text-dark"
+                }`}
+                style={{
+                  backgroundColor: activeMenu === menu ? "#EEF2F6" : "white",
+                }}
+              >
+                <span>{menu}</span>
+
+                {hasDropdown(menu) && (
+                  <img
+                    src={
+                      activeMenu === menu
+                        ? "/assets/CaretDownRedBold.svg"
+                        : "/assets/CaretDownBold.svg"
+                    }
+                    alt="Caret"
+                    style={{ width: "20px", height: "20px", marginLeft: "6px" }}
+                  />
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/*Notification & Profile */}
+          <div className="d-flex align-items-center" style={{ gap: "8px" }}>
+            <div className="position-relative">
+              <button
+                className="btn btn-light p-2 d-flex justify-content-center align-items-center"
+                style={{ backgroundColor: "white", borderColor: "white" }}
+              >
+                <img
+                  src="/assets/Bell.svg"
+                  alt="Notifokasi"
+                  style={{ width: "24px", height: "24px" }}
+                />
+              </button>
+              {notificationCount > 0 && (
+                <span
+                  className="position-absolute badge rounded-pill bg-danger"
+                  style={{ top: "2px", right: "2px", fontSize: "0.6rem" }}
+                >
+                  {notificationCount}
+                </span>
+              )}
+            </div>
+
+            <img
+              src="/assets/ProfilePicture.svg"
+              alt="Profile Picture"
+              style={{ width: "50px", height: "50px" }}
+            />
+          </div>
         </div>
       </header>
 
-      {/* === Sub Tab (khusus ONT & AP) === */}
-      {(activeMenu === "Minitok ONT" ||
-        activeMenu === "Minitok AP" ||
-        activeMenu === "Minitok Node B" ||
-        activeMenu === "Minitok ONT Entherprise") && (
-        <div className="px-4 pt-2 mb-1" style={{ backgroundColor: "#EEF2F6" }}>
-          <div className="d-flex gap-4">
-            {Object.entries(subTabsByMenu[activeMenu]).map(([key, label]) => (
-              <button
-                key={key}
-                onClick={() => handleSubTabClick(key)}
-                className={`btn border-0 rounded-0 px-0 pb-3 ${
-                  currentSubTab === key
-                    ? "text-danger border-bottom border-danger border-3"
-                    : "text-dark"
-                }`}
-                style={{ backgroundColor: "transparent" }}
-              >
-                {label}
-              </button>
-            ))}
+      {/* === Sub Tab (Sticky di Bawah Header, Hanya untuk Menu Minitok) === */}
+      {hasSubTab && (
+        <div className="dashboard-subtab">
+          <div
+            className="px-4 pt-2 mb-1"
+            style={{ backgroundColor: "#EEF2F6" }}
+          >
+            <div className="d-flex gap-4">
+              {Object.entries(subTabsByMenu[activeMenu]).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => handleSubTabClick(key)}
+                  className={`btn border-0 rounded-0 px-0 pb-3 ${
+                    currentSubTab === key
+                      ? "text-danger border-bottom border-danger border-3"
+                      : "text-dark"
+                  }`}
+                  style={{ backgroundColor: "transparent" }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
 
-      {/* === Konten Utama === */}
-      <>
+      {/* === Konten Utama (Scrollable dengan Padding-Top Dynamic) === */}
+      <main className={`dashboard-content ${hasSubTab ? "with-subtab" : ""}`}>
         {activeMenu === "Minitok ONT" && currentSubTab === "rekap" && (
           <RekapMinitokONT />
         )}
@@ -248,8 +257,8 @@ export default function Dashboard() {
         {activeMenu === "Minitok ONT Entherprise" &&
           currentSubTab === "report" && <ReportMinitokONTEntherprise />}
         {activeMenu === "Request Outbond" && <RequestOutbond />}
-        {activeMenu === "User List" && <UserList />}
-      </>
+        {activeMenu === "User  List" && <UserList />}
+      </main>
     </div>
   );
 }
