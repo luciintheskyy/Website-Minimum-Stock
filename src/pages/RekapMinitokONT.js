@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./style.css";
 
@@ -660,6 +660,49 @@ export default function RekapMinitokONT() {
     ],
   };
 
+  const currentTableRows = useMemo(() => {
+    let warehouses = [];
+    if (selectedLevel === "treg") {
+      // Multi-select TREG (dari selectedTregs)
+      if (selectedTregs && selectedTregs.length > 0) {
+        warehouses = selectedTregs
+          .map((treg) => `WH TR TREG ${treg.replace("TREG ", "")}`) // Generate key dari checked
+          .filter((tregKey) => tregData.hasOwnProperty(tregKey)); // Hanya yang valid di tregData
+      } else {
+        warehouses = []; // Atau default Object.keys(tregData) jika ingin tampil semua
+      }
+    } else if (selectedLevel === "witel" && selectedTreg) {
+      // FIX: Gunakan selectedTreg (TREG parent) untuk tampil WITEL di bawah TREG
+      warehouses = tregData[selectedTreg] || [];
+    } else if (selectedLevel === "ta" && selectedWitel) {
+      // Gunakan selectedWitel (WITEL parent) untuk tampil TA di bawah WITEL
+      warehouses = witelData[selectedWitel] || [];
+    }
+
+    return warehouses.map((wh) => {
+      const rowData = tableData.find((data) => data.warehouse === wh);
+      return (
+        rowData || {
+          warehouse: wh,
+          totalRetailSB: 0,
+          totalRetailDB: 0,
+          totalPremiumSCMT: 0,
+          totalONTSCMT: 0,
+          totalPremiumGAP: 0,
+          totalONTGAP: 0,
+          totalRetailKebutuhan: 0,
+          totalPremiumKebutuhan: 0,
+          totalONTKebutuhan: 0,
+          totalRetailMinStock: 0,
+          totalPremiumMinStock: 0,
+          totalONTMinStock: 0,
+          totalRetailDelivery: 0,
+          totalPremiumDelivery: 0,
+        }
+      );
+    });
+  }, [tableData, selectedLevel, selectedTreg, selectedWitel, selectedTregs]);
+
   useEffect(() => {
     const mockData = { last_update: "2025-07-12T09:59:30Z" };
     const date = new Date(mockData.last_update);
@@ -760,60 +803,24 @@ export default function RekapMinitokONT() {
     };
   }, []);
 
-  // Ambil data sesuai level
-  let warehouses = [];
-  if (selectedLevel === "treg") {
-    // Multi-select: Filter berdasarkan selectedTregs (hanya tampil yang checked)
-    if (selectedTregs && selectedTregs.length > 0) {
-      warehouses = selectedTregs
-        .map((treg) => `WH TR TREG ${treg.replace("TREG ", "")}`) // Generate key dari checked
-        .filter((tregKey) => tregData.hasOwnProperty(tregKey)); // Hanya yang valid di tregData
-    } else {
-      // Jika kosong (semua unchecked), warehouses = [] → no data di tabel
-      warehouses = [];
-    }
-    // Hilangkan if (selectedTreg) - sekarang pure multi dari checkbox
-  } else if (selectedLevel === "witel" && selectedWitel) {
-    warehouses = tregData[selectedWitel] || []; // WITEL di bawah TREG (single drill-down)
-  } else if (selectedLevel === "ta" && selectedWitel) {
-    warehouses = witelData[selectedWitel] || []; // TA di bawah WITELnpmss
-  }
-
-  const currentTableRows = warehouses.map((wh) => {
-    const rowData = tableData.find((data) => data.warehouse === wh);
-    return (
-      rowData || {
-        warehouse: wh,
-        totalRetailSB: 0,
-        totalRetailDB: 0,
-        totalPremiumSCMT: 0,
-        totalONTSCMT: 0,
-        totalPremiumGAP: 0,
-        totalONTGAP: 0,
-        totalRetailKebutuhan: 0,
-        totalPremiumKebutuhan: 0,
-        totalONTKebutuhan: 0,
-        totalRetailMinStock: 0,
-        totalPremiumMinStock: 0,
-        totalONTMinStock: 0,
-        totalRetailDelivery: 0,
-        totalPremiumDelivery: 0,
-      }
-    );
-  });
-
   useEffect(() => {
     if (currentTableRows.length === 0 && tableData.length > 0) {
       // Reset state ke level awal (treg) untuk munculkan WH TR TREG 1-5
       setSelectedLevel("treg");
       setSelectedWitel(null); // Reset witel selection
+      setSelectedTreg(null); // FIX: Reset TREG parent (sesuai instruksi)
       // Jika ada state selectedTa, tambah: setSelectedTa(null);
       // Opsional: console.log untuk test
       console.log(
         "No data detected - Reset to initial TREG level (WH TR TREG 1-5)"
       );
     }
-  }, [currentTableRows.length, tableData.length]);
+  }, [
+    currentTableRows.length,
+    tableData.length,
+    selectedTregs.length,
+    selectedLevel,
+  ]);
 
   return (
     <>
@@ -1288,8 +1295,9 @@ export default function RekapMinitokONT() {
                       key={row.warehouse || i} // Key unik berdasarkan warehouse (hindari React warning)
                       onClick={() => {
                         if (selectedLevel === "treg") {
-                          setSelectedWitel(row.warehouse); // Gunakan row.warehouse (fixed dari tableData)
+                          setSelectedTreg(row.warehouse); // Gunakan row.warehouse (fixed dari tableData)
                           setSelectedLevel("witel");
+                          setSelectedWitel(null);
                         } else if (selectedLevel === "witel") {
                           setSelectedWitel(row.warehouse); // Gunakan row.warehouse
                           setSelectedLevel("ta");
@@ -1355,6 +1363,7 @@ export default function RekapMinitokONT() {
                     setSelectedLevel("witel");
                   } else if (selectedLevel === "witel") {
                     setSelectedLevel("treg");
+                    setSelectedTreg(null);
                     setSelectedWitel(null);
                   }
                 }}
