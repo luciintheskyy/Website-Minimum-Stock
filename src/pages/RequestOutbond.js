@@ -7,13 +7,21 @@ import { DateRange } from "react-date-range";
 import { format } from "date-fns";
 import "react-date-range/dist/styles.css";
 import "react-date-range/dist/theme/default.css";
+import axios from "axios";
 
 export default function RequestOutbound() {
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8000";
+
   const [activeDropdown, setActiveDropdown] = useState(null);
   const dropdownContainerRef = useRef(null);
-  const [entriesPerPage, setEntriesPerPage] = useState(10);
+  const [entriesPerPage, setEntriesPerPage] = useState(15);
   const [currentPage, setCurrentPage] = useState(1);
-  const totalData = 5;
+  const [shipments, setShipments] = useState([]);
+  const [meta, setMeta] = useState({ current_page: 1, per_page: 15, total: 0, last_page: 1 });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // (Chat removed per request)
 
   // === Date Range State ===
   const [range, setRange] = useState([
@@ -54,6 +62,36 @@ export default function RequestOutbound() {
     };
   }, []);
 
+  // Fetch shipments from API when page/per_page changes
+  useEffect(() => {
+    const fetchShipments = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await axios.get(`${API_BASE_URL}/api/shipments`, {
+          params: { page: currentPage, per_page: entriesPerPage },
+        });
+        const payload = response?.data || {};
+        setShipments(Array.isArray(payload.data) ? payload.data : []);
+        const incomingMeta = payload.meta || {};
+        setMeta({
+          current_page: incomingMeta.current_page ?? currentPage,
+          per_page: incomingMeta.per_page ?? entriesPerPage,
+          total: incomingMeta.total ?? 0,
+          last_page: incomingMeta.last_page ?? 1,
+        });
+      } catch (err) {
+        setError(
+          err?.response?.data?.message || "Gagal memuat data shipments"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchShipments();
+  }, [currentPage, entriesPerPage]);
+
+  const totalData = meta.total || 0;
   const startRange = (currentPage - 1) * entriesPerPage + 1;
   const endRange = Math.min(currentPage * entriesPerPage, totalData);
 
@@ -83,68 +121,14 @@ export default function RequestOutbound() {
     return <span style={style}>{status}</span>;
   };
 
-  const rows = [
-    {
-      type: "ONT_FIBERHOME_HG6245N",
-      jenis: "Premium",
-      merk: "Fiberhome",
-      qty: 10,
-      delivery: "Udara",
-      tujuan: "TA WITEL CCAN LAMPUNG (BANDAR LAMPUNG) WH",
-      pic: "Admin",
-      approvedBy: "Admin",
-      time: "2023-11-27 10:43:53",
-      status: "On Going",
-    },
-    {
-      type: "STB_ZTE_B860H_V5.0",
-      jenis: "STB",
-      merk: "ZTE",
-      qty: 5,
-      delivery: "Darat",
-      tujuan: "TA WITEL JAKARTA SELATAN",
-      pic: "Rina",
-      approvedBy: "Andi",
-      time: "2023-11-28 09:12:15",
-      status: "Submitted",
-    },
-    {
-      type: "ONT_HUAWEI_HG8245H",
-      jenis: "Basic",
-      merk: "Huawei",
-      qty: 15,
-      delivery: "Udara",
-      tujuan: "TA WITEL BANDUNG",
-      pic: "Admin",
-      approvedBy: "Admin",
-      time: "2023-11-29 11:20:33",
-      status: "On Going",
-    },
-    {
-      type: "ONT_ZTE_F660",
-      jenis: "Premium",
-      merk: "ZTE",
-      qty: 8,
-      delivery: "Darat",
-      tujuan: "TA WITEL SURABAYA",
-      pic: "Budi",
-      approvedBy: "Siti",
-      time: "2023-11-30 14:45:27",
-      status: "Approved",
-    },
-    {
-      type: "ONT_FIBERHOME_AN5506-04-FG",
-      jenis: "Basic",
-      merk: "Fiberhome",
-      qty: 12,
-      delivery: "Udara",
-      tujuan: "TA WITEL MEDAN",
-      pic: "Agus",
-      approvedBy: "Tono",
-      time: "2023-12-01 08:32:40",
-      status: "Approved",
-    },
-  ];
+  const formatDate = (isoString) => {
+    if (!isoString) return "-";
+    const d = new Date(isoString);
+    if (Number.isNaN(d.getTime())) return isoString;
+    return format(d, "yyyy-MM-dd HH:mm:ss");
+  };
+
+  // (Chat handlers removed per request)
 
   return (
     <>
@@ -278,45 +262,46 @@ export default function RequestOutbound() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row, idx) => (
-                  <tr key={idx}>
-                    <td>{row.type}</td>
-                    <td>{row.jenis}</td>
-                    <td>{row.merk}</td>
-                    <td>{row.qty}</td>
-                    <td>{row.delivery}</td>
-                    <td>{row.tujuan}</td>
-                    <td>{row.pic}</td>
-                    <td>{row.approvedBy}</td>
-                    <td>{row.time}</td>
-                    <td>{renderStatus(row.status)}</td>
+                {loading && (
+                  <tr>
+                    <td colSpan={11} className="text-center">Memuat data...</td>
+                  </tr>
+                )}
+                {error && !loading && (
+                  <tr>
+                    <td colSpan={11} className="text-center text-danger">{error}</td>
+                  </tr>
+                )}
+                {!loading && !error && shipments.length === 0 && (
+                  <tr>
+                    <td colSpan={11} className="text-center">Tidak ada data</td>
+                  </tr>
+                )}
+                {!loading && !error && shipments.map((s) => (
+                  <tr key={s.id}>
+                    <td>{s.type}</td>
+                    <td>{s.jenis}</td>
+                    <td>{s.merk}</td>
+                    <td>{s.qty}</td>
+                    <td>{s.delivery_by}</td>
+                    <td>{s.alamat_tujuan}</td>
+                    <td>{s.pic?.name ?? "-"}</td>
+                    <td>{s.approved_by?.name ?? "-"}</td>
+                    <td>{formatDate(s.created_at)}</td>
+                    <td>{renderStatus(s.status)}</td>
                     <td>
                       <div className="d-flex justify-content-center gap-2">
                         <button
                           className="btn btn-sm p-1"
-                          style={{
-                            backgroundColor: "transparent",
-                            border: "none",
-                          }}
+                          style={{ backgroundColor: "transparent", border: "none" }}
                         >
-                          <img
-                            src="/assets/ChatTeardropText.svg"
-                            alt="Chat"
-                            style={{ width: "20px", height: "20px" }}
-                          />
+                          <img src="/assets/ChatTeardropText.svg" alt="Chat" style={{ width: "20px", height: "20px" }} />
                         </button>
                         <button
                           className="btn btn-sm p-1"
-                          style={{
-                            backgroundColor: "transparent",
-                            border: "none",
-                          }}
+                          style={{ backgroundColor: "transparent", border: "none" }}
                         >
-                          <img
-                            src="/assets/DotsThreeVertical.svg"
-                            alt="More"
-                            style={{ width: "20px", height: "20px" }}
-                          />
+                          <img src="/assets/DotsThreeVertical.svg" alt="More" style={{ width: "20px", height: "20px" }} />
                         </button>
                       </div>
                     </td>
@@ -339,6 +324,7 @@ export default function RequestOutbound() {
                 }}
               >
                 <option value={10}>10 entries</option>
+                <option value={15}>15 entries</option>
                 <option value={25}>25 entries</option>
                 <option value={50}>50 entries</option>
               </select>
@@ -359,7 +345,7 @@ export default function RequestOutbound() {
               >
                 &lt;
               </button>
-              {[1].map((page) => (
+              {Array.from({ length: meta.last_page || 1 }, (_, i) => i + 1).map((page) => (
                 <button
                   key={page}
                   className="btn btn-sm"
@@ -384,8 +370,8 @@ export default function RequestOutbound() {
                   border: "1px solid #E3E8EF",
                   color: "#6c757d",
                 }}
-                disabled={currentPage * entriesPerPage >= totalData}
-                onClick={() => setCurrentPage((prev) => prev + 1)}
+                disabled={currentPage >= (meta.last_page || 1)}
+                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, meta.last_page || 1))}
               >
                 &gt;
               </button>
@@ -407,6 +393,7 @@ export default function RequestOutbound() {
           </div>
         </div>
       </div>
+      {/* Chat modal removed per request */}
     </>
   );
 }

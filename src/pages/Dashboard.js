@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import axios from "axios";
 import RekapMinitokONT from "./RekapMinitokONT";
 import ReportMinitokONT from "./ReportMinitokONT";
 import RekapMinitokAP from "./RekapMinitokAP";
@@ -10,6 +11,8 @@ import RekapMinitokONTEntherprise from "./RekapMinitokONTEntherprise";
 import ReportMinitokONTEntherprise from "./ReportMinitokONTEntherprise";
 import RequestOutbond from "./RequestOutbond";
 import UserList from "./UserList";
+import AddUser from "./AddUser";
+import EditUser from "./EditUser";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import "./style.css";
@@ -17,12 +20,16 @@ import "./style.css";
 export default function Dashboard() {
   const navigate = useNavigate();
   const { subtab } = useParams(); // Ambil dari URL
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8000";
 
   const [activeMenu, setActiveMenu] = useState("Minitok ONT");
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [notificationCount] = useState(3);
   const [lastUpdate, setLastUpdate] = useState("");
   const dropdownContainerRef = useRef(null);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   const menus = [
     "Minitok ONT",
@@ -83,6 +90,7 @@ export default function Dashboard() {
     if (menu === "Minitok Node B") navigate("/minitok-nodeb/rekap");
     if (menu === "Minitok ONT Entherprise")
       navigate("/minitok-ontentherprise/rekap");
+    if (menu === "User List") setSelectedUser(null);
   };
 
   const hasDropdown = (menu) =>
@@ -101,6 +109,43 @@ export default function Dashboard() {
     ).padStart(2, "0")}`;
     setLastUpdate(formattedDate);
   }, []);
+
+  // Fetch current user (/api/me)
+  useEffect(() => {
+    const fetchMe = async () => {
+      try {
+        const res = await axios.get(`${API_BASE_URL}/api/me`);
+        const me = res.data?.user || null;
+        setCurrentUser(me);
+      } catch (e) {
+        // ignore; handled by 401 interceptor if unauthenticated
+        console.error(e);
+      }
+    };
+    fetchMe();
+  }, [API_BASE_URL]);
+
+  const logoutNow = async () => {
+    try {
+      await axios.post(`${API_BASE_URL}/api/auth/logout`);
+    } catch (e) {
+      // ignore
+    }
+    delete axios.defaults.headers.common["Authorization"];
+    localStorage.removeItem("auth_token");
+    navigate("/login", { replace: true });
+  };
+
+  const mapMeToEditUser = (me) => ({
+    id: me?.id,
+    firstName: me?.first_name || "",
+    lastName: me?.last_name || "",
+    asal: me?.address || "",
+    phone: me?.phone || "",
+    role_id: me?.role?.role_id || "",
+    email: me?.email || "",
+    is_deleted: false,
+  });
 
   // Dropdown handlers
   const toggleDropdown = (type) => {
@@ -195,12 +240,66 @@ export default function Dashboard() {
                 </span>
               )}
             </div>
-
-            <img
-              src="/assets/ProfilePicture.svg"
-              alt="Profile Picture"
-              style={{ width: "50px", height: "50px" }}
-            />
+            <div className="position-relative" ref={dropdownContainerRef}>
+              <button
+                className="btn p-0 border-0"
+                aria-haspopup="true"
+                aria-expanded={profileMenuOpen ? "true" : "false"}
+                onClick={() => setProfileMenuOpen((s) => !s)}
+              >
+                <img
+                  src={currentUser?.profile_picture_url || "/assets/ProfilePicture.svg"}
+                  alt="Profile"
+                  style={{ width: "50px", height: "50px", borderRadius: "50%", objectFit: "cover" }}
+                />
+              </button>
+              {profileMenuOpen && (
+                <div
+                  className="dropdown-menu dropdown-menu-end show"
+                  style={{ position: "absolute", right: 0, top: "60px" }}
+                >
+                  <div className="px-3 py-2" style={{ minWidth: 220 }}>
+                    <div className="d-flex align-items-center mb-2">
+                      <img
+                        src={currentUser?.profile_picture_url || "/assets/ProfilePicture.svg"}
+                        alt="Profile"
+                        style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover" }}
+                      />
+                      <div className="ms-2">
+                        <div className="fw-semibold" style={{ lineHeight: 1.2 }}>
+                          {currentUser ? `${currentUser.first_name} ${currentUser.last_name}` : "User"}
+                        </div>
+                        <small className="text-muted">{currentUser?.role?.name || ""}</small>
+                      </div>
+                    </div>
+                    <button
+                      className="dropdown-item d-flex align-items-center"
+                      onClick={() => {
+                        if (currentUser) {
+                          const mapped = mapMeToEditUser(currentUser);
+                          setSelectedUser(mapped);
+                          setActiveMenu("Edit User");
+                        }
+                        setProfileMenuOpen(false);
+                      }}
+                    >
+                      <i className="fa-solid fa-user-pen me-2"></i>
+                      Update Profile
+                    </button>
+                    <button
+                      className="dropdown-item d-flex align-items-center text-danger"
+                      onClick={() => {
+                        setProfileMenuOpen(false);
+                        logoutNow();
+                      }}
+                    >
+                      <i className="fa-solid fa-right-from-bracket me-2"></i>
+                      Logout
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -257,7 +356,34 @@ export default function Dashboard() {
         {activeMenu === "Minitok ONT Entherprise" &&
           currentSubTab === "report" && <ReportMinitokONTEntherprise />}
         {activeMenu === "Request Outbond" && <RequestOutbond />}
-        {activeMenu === "User  List" && <UserList />}
+        {activeMenu === "User List" && (
+          <UserList
+            onAdd={() => setActiveMenu("Add User")}
+            onEdit={(row) => {
+              setSelectedUser(row);
+              setActiveMenu("Edit User");
+            }}
+          />
+        )}
+        {activeMenu === "Add User" && (
+          <AddUser
+            onSaved={() => setActiveMenu("User List")}
+            onCancel={() => setActiveMenu("User List")}
+          />
+        )}
+        {activeMenu === "Edit User" && selectedUser && (
+          <EditUser
+            user={selectedUser}
+            onSaved={() => {
+              setSelectedUser(null);
+              setActiveMenu("User List");
+            }}
+            onCancel={() => {
+              setSelectedUser(null);
+              setActiveMenu("User List");
+            }}
+          />
+        )}
       </main>
     </div>
   );

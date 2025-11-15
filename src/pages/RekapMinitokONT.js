@@ -1243,50 +1243,52 @@ export default function RekapMinitokONT() {
         <div className="bg-white table-container-rounded">
           <div className="table-responsive">
             <table className="table table-bordered table-sm text-center table-custom">
-              <tr className="bg-abu">
-                <th rowSpan="2" style={{ width: "300px" }}>
-                  Warehouse
-                </th>
-                <th colSpan="4">
-                  Stock SCMT
-                  <br />
-                  <small style={{ backgroundColor: "transparent" }}>(A)</small>
-                </th>
-                <th colSpan="2">
-                  GAP Stock
-                  <br />
-                  <small style={{ backgroundColor: "transparent" }}>
-                    (A + C - B)
-                  </small>
-                </th>
-                <th colSpan="3">Kebutuhan</th>
-                <th colSpan="3">
-                  Minimum Stock Requirement Retail
-                  <br />
-                  <small style={{ backgroundColor: "transparent" }}>(B)</small>
-                </th>
-                <th colSpan="2">
-                  On Delivery
-                  <br />
-                  <small style={{ backgroundColor: "transparent" }}>(C)</small>
-                </th>
-              </tr>
-              <tr className="bg-abu">
-                <th>Total Retail SB</th>
-                <th>Total Retail DB</th>
-                <th>Total Premium</th>
-                <th>Total ONT</th>
-                <th>Total Premium</th>
-                <th>Total ONT</th>
-                <th>Total Retail</th>
-                <th>Total Premium</th>
-                <th>Total ONT</th>
-                <th>Total Retail</th>
-                <th>Total Premium</th>
-                <th>Total ONT</th>
-                <th>Total Retail</th>
-                <th>Total Premium</th>
-              </tr>
+              <thead className="bg-abu">
+                <tr>
+                  <th rowSpan="2" style={{ width: "300px" }}>
+                    Warehouse
+                  </th>
+                  <th colSpan="4">
+                    Stock SCMT
+                    <br />
+                    <small style={{ backgroundColor: "transparent" }}>(A)</small>
+                  </th>
+                  <th colSpan="2">
+                    GAP Stock
+                    <br />
+                    <small style={{ backgroundColor: "transparent" }}>
+                      (A + C - B)
+                    </small>
+                  </th>
+                  <th colSpan="3">Kebutuhan</th>
+                  <th colSpan="3">
+                    Minimum Stock Requirement Retail
+                    <br />
+                    <small style={{ backgroundColor: "transparent" }}>(B)</small>
+                  </th>
+                  <th colSpan="2">
+                    On Delivery
+                    <br />
+                    <small style={{ backgroundColor: "transparent" }}>(C)</small>
+                  </th>
+                </tr>
+                <tr>
+                  <th>Total Retail SB</th>
+                  <th>Total Retail DB</th>
+                  <th>Total Premium</th>
+                  <th>Total ONT</th>
+                  <th>Total Premium</th>
+                  <th>Total ONT</th>
+                  <th>Total Retail</th>
+                  <th>Total Premium</th>
+                  <th>Total ONT</th>
+                  <th>Total Retail</th>
+                  <th>Total Premium</th>
+                  <th>Total ONT</th>
+                  <th>Total Retail</th>
+                  <th>Total Premium</th>
+                </tr>
+              </thead>
 
               <tbody>
                 {currentTableRows.length > 0 ? (
@@ -1308,38 +1310,23 @@ export default function RekapMinitokONT() {
                     >
                       <td className="bg-abu fw-bold">
                         {row.warehouse || "N/A"}
-                      </td>{" "}
-                      {/* Fixed */}
-                      <td>{row.totalRetailSB || 0}</td>{" "}
-                      {/* Fixed: 50 + baseValue */}
-                      <td>{row.totalRetailDB || 0}</td>{" "}
-                      {/* Fixed: 60 + baseValue */}
-                      <td>{row.totalPremiumSCMT || 0}</td>{" "}
-                      {/* Fixed: 20 + baseValue / 2 */}
-                      <td>{row.totalONTSCMT || 0}</td>{" "}
-                      {/* Fixed: 80 + baseValue */}
-                      <td>{row.totalPremiumGAP || 0}</td>{" "}
-                      {/* Fixed: 5 + baseValue / 5 */}
-                      <td className="bg-success text-white fw-bold">
-                        {row.totalONTGAP || 0}{" "}
-                        {/* Fixed: 10 + baseValue / 2 (hijau) */}
                       </td>
-                      <td>{row.totalRetailKebutuhan || 0}</td>{" "}
-                      {/* Fixed: 200 + baseValue * 2 */}
-                      <td>{row.totalPremiumKebutuhan || 0}</td>{" "}
-                      {/* Fixed: 100 + baseValue */}
-                      <td>{row.totalONTKebutuhan || 0}</td>{" "}
-                      {/* Fixed: 300 + baseValue * 2 */}
-                      <td>{row.totalRetailMinStock || 0}</td>{" "}
-                      {/* Fixed: 100 + baseValue */}
-                      <td>{row.totalPremiumMinStock || 0}</td>{" "}
-                      {/* Fixed: 50 + baseValue / 2 */}
-                      <td>{row.totalONTMinStock || 0}</td>{" "}
-                      {/* Fixed: 150 + baseValue */}
-                      <td>{row.totalRetailDelivery || 0}</td>{" "}
-                      {/* Fixed: 50 + baseValue */}
-                      <td>{row.totalPremiumDelivery || 0}</td>{" "}
-                      {/* Fixed: 50 + baseValue */}
+                      <td>{row.totalRetailSB || 0}</td>
+                      <td>{row.totalRetailDB || 0}</td>
+                      <td>{row.totalPremiumSCMT || 0}</td>
+                      <td>{row.totalONTSCMT || 0}</td>
+                      <td>{row.totalPremiumGAP || 0}</td>
+                      <td className="bg-success text-white fw-bold">
+                        {row.totalONTGAP || 0}
+                      </td>
+                      <td>{row.totalRetailKebutuhan || 0}</td>
+                      <td>{row.totalPremiumKebutuhan || 0}</td>
+                      <td>{row.totalONTKebutuhan || 0}</td>
+                      <td>{row.totalRetailMinStock || 0}</td>
+                      <td>{row.totalPremiumMinStock || 0}</td>
+                      <td>{row.totalONTMinStock || 0}</td>
+                      <td>{row.totalRetailDelivery || 0}</td>
+                      <td>{row.totalPremiumDelivery || 0}</td>
                     </tr>
                   ))
                 ) : (
