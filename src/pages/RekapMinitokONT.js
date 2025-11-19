@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./style.css";
 
@@ -19,6 +20,9 @@ export default function RekapMinitokONT() {
     "TREG 5",
   ]);
   const [tableData, setTableData] = useState([]);
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8000";
+  const [percentage, setPercentage] = useState(0);
+  const [counts, setCounts] = useState({ red: 0, yellow: 0, green: 0 });
 
   const tregData = {
     "WH TR TREG 1": [
@@ -704,17 +708,31 @@ export default function RekapMinitokONT() {
   }, [tableData, selectedLevel, selectedTreg, selectedWitel, selectedTregs]);
 
   useEffect(() => {
-    const mockData = { last_update: "2025-07-12T09:59:30Z" };
-    const date = new Date(mockData.last_update);
-    const formattedDate = `${date.getFullYear()}-${String(
-      date.getMonth() + 1
-    ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")} ${String(
-      date.getHours()
-    ).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:${String(
-      date.getSeconds()
-    ).padStart(2, "0")}`;
-    setLastUpdate(formattedDate);
-  }, []);
+    const fetchSummary = async () => {
+      try {
+        const res = await axios.get(`${API_BASE_URL}/api/reports/summary`, {
+          params: { jenis: "ONT", yellow_threshold: 20 },
+        });
+        const data = res.data || {};
+        const lu = data.last_update || null;
+        if (lu) {
+          const date = new Date(lu);
+          const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}`;
+          setLastUpdate(formattedDate);
+        }
+        setPercentage(Number(data.percentage || 0));
+        setCounts({
+          red: Number(data.counts?.red || 0),
+          yellow: Number(data.counts?.yellow || 0),
+          green: Number(data.counts?.green || 0),
+        });
+      } catch (e) {
+        // Silent fail; biarkan tabel lokal tetap tampil
+        console.error(e);
+      }
+    };
+    fetchSummary();
+  }, [API_BASE_URL]);
 
   useEffect(() => {
     const allWarehouses = [
@@ -831,7 +849,7 @@ export default function RekapMinitokONT() {
           <div className="border rounded bg-white px-3 py-3">
             <div className="text-muted medium mb-1">Percentage</div>
             <div className="d-flex align-items-center justify-content-between">
-              <div className="h3 mb-0">77,90%</div>
+              <div className="h3 mb-0">{Number(percentage).toFixed(2)}%</div>
               <img
                 src="/assets/ChartBar.svg"
                 alt="Chart"
@@ -845,7 +863,7 @@ export default function RekapMinitokONT() {
           <div className="border rounded bg-white px-3 py-3">
             <div className="text-muted medium mb-1">Red Status</div>
             <div className="d-flex align-items-center justify-content-between">
-              <div className="h3 mb-0">53</div>
+              <div className="h3 mb-0">{counts.red}</div>
               <img
                 src="/assets/CautionBell.svg"
                 alt="Chart"
@@ -859,7 +877,7 @@ export default function RekapMinitokONT() {
           <div className="border rounded bg-white px-3 py-3">
             <div className="text-muted medium mb-1">Yellow Status</div>
             <div className="d-flex align-items-center justify-content-between">
-              <div className="h3 mb-0">159</div>
+              <div className="h3 mb-0">{counts.yellow}</div>
               <img
                 src="/assets/WarningOctagon.svg"
                 alt="Chart"
@@ -873,7 +891,7 @@ export default function RekapMinitokONT() {
           <div className="border rounded bg-white px-3 py-3">
             <div className="text-muted medium mb-1">Green Status</div>
             <div className="d-flex align-items-center justify-content-between">
-              <div className="h3 mb-0">349</div>
+              <div className="h3 mb-0">{counts.green}</div>
               <img
                 src="/assets/WarningOctagon.svg"
                 alt="Chart"

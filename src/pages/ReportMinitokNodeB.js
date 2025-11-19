@@ -1,15 +1,22 @@
 import React, { useState, useEffect, useRef } from "react";
+import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./style.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { Tooltip } from "bootstrap";
+import { postActivityLog } from "../api/activityLogs";
 
 export default function ReportMinitokNodeB() {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const dropdownContainerRef = useRef(null);
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
-  const totalData = 539;
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8000";
+  const [totalData, setTotalData] = useState(0);
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const uploadInputRef = useRef(null);
 
   const toggleDropdown = (type) => {
     setActiveDropdown((prev) => (prev === type ? null : type));
@@ -35,8 +42,154 @@ export default function ReportMinitokNodeB() {
     };
   }, []);
 
+  const jenis = "NodeB";
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await axios.get(`${API_BASE_URL}/api/reports`, {
+          params: { jenis, per_page: entriesPerPage, page: currentPage },
+        });
+        const data = res.data?.data || [];
+        const meta = res.data?.meta || {};
+        setReports(data);
+        setTotalData(meta.total ?? data.length);
+      } catch (e) {
+        console.error(e);
+        setError("Gagal memuat data report");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReports();
+  }, [API_BASE_URL, entriesPerPage, currentPage]);
+
   const startRange = (currentPage - 1) * entriesPerPage + 1;
   const endRange = Math.min(currentPage * entriesPerPage, totalData);
+
+  const downloadTemplateCSV = () => {
+    const headers = [
+      "type",
+      "qty",
+      "warehouse",
+      "sender_alamat",
+      "sender_pic",
+      "receiver_alamat",
+      "receiver_warehouse",
+      "receiver_pic",
+      "tanggal_pengiriman",
+      "tanggal_sampai",
+      "batch",
+    ];
+    const csv = headers.join(",") + "\n";
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `template_report_${jenis}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    try {
+      postActivityLog({
+        user_id: Number(localStorage.getItem("current_user_id")) || undefined,
+        activity: "download template report NodeB",
+        timestamp: new Date().toISOString(),
+      });
+    } catch (_) {}
+  };
+
+  const exportCSV = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/reports`, {
+        params: { jenis, per_page: 200, page: 1 },
+      });
+      const all = res.data?.data || [];
+      const headers = [
+        "id",
+        "jenis",
+        "type",
+        "qty",
+        "warehouse",
+        "sender_alamat",
+        "sender_pic",
+        "receiver_alamat",
+        "receiver_warehouse",
+        "receiver_pic",
+        "tanggal_pengiriman",
+        "tanggal_sampai",
+        "batch",
+        "created_at",
+        "updated_at",
+      ];
+      const rows = all.map((r) => headers.map((h) => (r[h] ?? "")).join(","));
+      const csv = headers.join(",") + "\n" + rows.join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `export_report_${jenis}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      try {
+        postActivityLog({
+          user_id: Number(localStorage.getItem("current_user_id")) || undefined,
+          activity: "export data report NodeB",
+          timestamp: new Date().toISOString(),
+        });
+      } catch (_) {}
+    } catch (e) {
+      console.error(e);
+      alert("Gagal export data");
+    }
+  };
+
+  const openUpload = () => uploadInputRef.current?.click();
+  const handleFileSelected = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const isCSV = file.name.toLowerCase().endsWith(".csv");
+    try {
+      if (isCSV) {
+        const text = await file.text();
+        const lines = text.split(/\r?\n/).filter((l) => l.trim().length);
+        const headers = lines.shift().split(",");
+        const items = lines.map((line) => {
+          const cols = line.split(",");
+          const obj = {};
+          headers.forEach((h, i) => (obj[h].trim ? obj[h.trim()] = (cols[i] || "").trim() : null));
+          obj.qty = parseInt(obj.qty || "0", 10);
+          obj.warehouse = obj.warehouse || null;
+          obj.sender_alamat = obj.sender_alamat || null;
+          obj.sender_pic = obj.sender_pic || null;
+          obj.receiver_alamat = obj.receiver_alamat || null;
+          obj.receiver_warehouse = obj.receiver_warehouse || null;
+          obj.receiver_pic = obj.receiver_pic || null;
+          obj.tanggal_pengiriman = obj.tanggal_pengiriman || null;
+          obj.tanggal_sampai = obj.tanggal_sampai || null;
+          obj.batch = obj.batch || null;
+          return obj;
+        });
+        await axios.post(`${API_BASE_URL}/api/reports`, { jenis, items });
+        alert(`Import berhasil: ${items.length} item`);
+        try {
+          postActivityLog({
+            user_id: Number(localStorage.getItem("current_user_id")) || undefined,
+            activity: `import laporan NodeB (${items.length} item)`,
+            timestamp: new Date().toISOString(),
+          });
+        } catch (_) {}
+      } else {
+        alert("Format tidak didukung. Gunakan CSV untuk saat ini.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Gagal import data");
+    } finally {
+      e.target.value = "";
+    }
+  };
 
   return (
     <>
@@ -180,7 +333,7 @@ export default function ReportMinitokNodeB() {
           </div>
 
           {/* Download Template */}
-          <button
+          <button onClick={downloadTemplateCSV}
             className="btn d-flex align-items-center justify-content-between px-3 text-dark"
             style={{
               backgroundColor: "#EEF2F6",
@@ -200,7 +353,8 @@ export default function ReportMinitokNodeB() {
           </button>
 
           {/* Upload Pengiriman */}
-          <button
+          <input ref={uploadInputRef} type="file" accept=".csv" style={{ display: "none" }} onChange={handleFileSelected} />
+          <button onClick={openUpload}
             className="btn d-flex align-items-center justify-content-between px-3 text-dark"
             style={{
               backgroundColor: "#EEF2F6",
@@ -282,46 +436,35 @@ export default function ReportMinitokNodeB() {
                 </tr>
               </thead>
               <tbody>
-                {[...Array(10)].map((_, idx) => (
-                  <tr key={idx}>
-                    <td>{idx + 1}</td>
-                    <td>ONT_FIBERHOME_HG6245N</td>
-                    <td>24</td>
-                    <td>WH FH</td>
-                    <td>FIBERHOME</td>
-                    <td>WH TA</td>
-                    <td>TA WITEL CCAN BANGKA BELITUNG (PANGKAL PINANG) WH</td>
-                    <td>WH TR TREG1</td>
-                    <td>Tanggal Pengiriman</td>
-                    <td>Tanggal Sampai</td>
-                    <td>Batch</td>
+                {loading && (
+                  <tr><td colSpan={12} className="text-center">Memuat...</td></tr>
+                )}
+                {error && !loading && (
+                  <tr><td colSpan={12} className="text-center text-danger">{error}</td></tr>
+                )}
+                {!loading && !error && reports.length === 0 && (
+                  <tr><td colSpan={12} className="text-center">Tidak ada data</td></tr>
+                )}
+                {!loading && !error && reports.map((r, idx) => (
+                  <tr key={r.id || idx}>
+                    <td>{(currentPage - 1) * entriesPerPage + idx + 1}</td>
+                    <td>{r.type}</td>
+                    <td>{r.qty}</td>
+                    <td>{r.sender_alamat || '-'}</td>
+                    <td>{r.sender_pic || '-'}</td>
+                    <td>{r.receiver_alamat || '-'}</td>
+                    <td>{r.receiver_warehouse || '-'}</td>
+                    <td>{r.receiver_pic || '-'}</td>
+                    <td>{r.tanggal_pengiriman || '-'}</td>
+                    <td>{r.tanggal_sampai || '-'}</td>
+                    <td>{r.batch || '-'}</td>
                     <td>
                       <div className="d-flex justify-content-center gap-2">
-                        <button
-                          className="btn btn-sm p-1"
-                          style={{
-                            backgroundColor: "transparent",
-                            border: "none",
-                          }}
-                        >
-                          <img
-                            src="/assets/NotePencil.svg"
-                            alt="Edit"
-                            style={{ width: "20px", height: "20px" }}
-                          />
+                        <button className="btn btn-sm p-1" style={{ backgroundColor: "transparent", border: "none" }} onClick={exportCSV}>
+                          <img src="/assets/TrayArrowUp.svg" alt="Export" style={{ width: "20px", height: "20px" }} />
                         </button>
-                        <button
-                          className="btn btn-sm p-1"
-                          style={{
-                            backgroundColor: "transparent",
-                            border: "none",
-                          }}
-                        >
-                          <img
-                            src="/assets/Trash.svg"
-                            alt="Delete"
-                            style={{ width: "20px", height: "20px" }}
-                          />
+                        <button className="btn btn-sm p-1" style={{ backgroundColor: "transparent", border: "none" }}>
+                          <img src="/assets/Trash.svg" alt="Delete" style={{ width: "20px", height: "20px" }} />
                         </button>
                       </div>
                     </td>

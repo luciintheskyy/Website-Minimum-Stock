@@ -1,24 +1,60 @@
 import React, { useState, useEffect, useRef } from "react";
+import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./style.css";
 
 export default function RekapMinitokAP() {
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8000";
   const [lastUpdate, setLastUpdate] = useState(null);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const dropdownContainerRef = useRef(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [percentage, setPercentage] = useState(0);
+  const [counts, setCounts] = useState({ red: 0, yellow: 0, green: 0 });
+  const [rows, setRows] = useState([]);
+
+  // Default parameter global sesuai dokumentasi
+  const defaultMinStock = 215; // B
+  const defaultKebutuhan = 444;
+  const defaultYellowThreshold = 20;
 
   useEffect(() => {
-    const mockData = { last_update: "2025-07-12T09:59:30Z" };
-    const date = new Date(mockData.last_update);
-    const formattedDate = `${date.getFullYear()}-${String(
-      date.getMonth() + 1
-    ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")} ${String(
-      date.getHours()
-    ).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:${String(
-      date.getSeconds()
-    ).padStart(2, "0")}`;
-    setLastUpdate(formattedDate);
-  }, []);
+    const fetchSummary = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await axios.get(`${API_BASE_URL}/api/reports/summary`, {
+          params: {
+            jenis: "AP",
+            min_stock: defaultMinStock,
+            kebutuhan: defaultKebutuhan,
+            yellow_threshold: defaultYellowThreshold,
+          },
+        });
+        const data = res.data || {};
+        const lu = data.last_update || null;
+        if (lu) {
+          const date = new Date(lu);
+          const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}`;
+          setLastUpdate(formattedDate);
+        }
+        setPercentage(Number(data.percentage || 0));
+        setCounts({
+          red: Number(data.counts?.red || 0),
+          yellow: Number(data.counts?.yellow || 0),
+          green: Number(data.counts?.green || 0),
+        });
+        setRows(Array.isArray(data.rows) ? data.rows : []);
+      } catch (e) {
+        console.error(e);
+        setError("Gagal memuat ringkasan AP");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSummary();
+  }, [API_BASE_URL]);
 
   const toggleDropdown = (type) => {
     setActiveDropdown((prev) => (prev === type ? null : type));
@@ -52,7 +88,7 @@ export default function RekapMinitokAP() {
           <div className="border rounded bg-white px-3 py-3">
             <div className="text-muted medium mb-1">Percentage</div>
             <div className="d-flex align-items-center justify-content-between">
-              <div className="h3 mb-0">77,90%</div>
+              <div className="h3 mb-0">{Number(percentage).toFixed(2)}%</div>
               <img
                 src="/assets/ChartBar.svg"
                 alt="Chart"
@@ -65,7 +101,7 @@ export default function RekapMinitokAP() {
           <div className="border rounded bg-white px-3 py-3">
             <div className="text-muted medium mb-1">Red Status</div>
             <div className="d-flex align-items-center justify-content-between">
-              <div className="h3 mb-0">53</div>
+              <div className="h3 mb-0">{counts.red}</div>
               <img
                 src="/assets/CautionBell.svg"
                 alt="Chart"
@@ -78,7 +114,7 @@ export default function RekapMinitokAP() {
           <div className="border rounded bg-white px-3 py-3">
             <div className="text-muted medium mb-1">Yellow Status</div>
             <div className="d-flex align-items-center justify-content-between">
-              <div className="h3 mb-0">159</div>
+              <div className="h3 mb-0">{counts.yellow}</div>
               <img
                 src="/assets/WarningOctagon.svg"
                 alt="Chart"
@@ -91,7 +127,7 @@ export default function RekapMinitokAP() {
           <div className="border rounded bg-white px-3 py-3">
             <div className="text-muted medium mb-1">Green Status</div>
             <div className="d-flex align-items-center justify-content-between">
-              <div className="h3 mb-0">349</div>
+              <div className="h3 mb-0">{counts.green}</div>
               <img
                 src="/assets/WarningOctagon.svg"
                 alt="Chart"
@@ -108,7 +144,7 @@ export default function RekapMinitokAP() {
           className="rounded px-3 py-2 text-dark small"
           style={{ backgroundColor: "#EEF2F6" }}
         >
-          Last Update : {lastUpdate}
+          Last Update : {lastUpdate || "-"}
         </div>
 
         {/* Buttons & Dropdowns */}
@@ -324,25 +360,41 @@ export default function RekapMinitokAP() {
                 </tr>
               </thead>
               <tbody>
-                {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-                  <tr key={i}>
-                    <td className="bg-abu">{`WH TR TREG ${i}`}</td>
-                    <td>84</td>
-                    <td className="bg-success text-white fw-bold">21</td>
-                    <td>444</td>
-                    <td>215</td>
-                    <td>72</td>
+                {loading && (
+                  <tr>
+                    <td colSpan="6" className="text-center">Memuat...</td>
+                  </tr>
+                )}
+                {error && !loading && (
+                  <tr>
+                    <td colSpan="6" className="text-danger text-center">{error}</td>
+                  </tr>
+                )}
+                {!loading && !error && rows.length === 0 && (
+                  <tr>
+                    <td colSpan="6" className="text-center">Tidak ada data</td>
+                  </tr>
+                )}
+                {!loading && !error && rows.map((r, idx) => (
+                  <tr key={r.warehouse || idx}>
+                    <td className="bg-abu">{r.warehouse}</td>
+                    <td>{r.total_stock_a}</td>
+                    <td className={(r.gap_stock < 0 ? "bg-danger" : r.gap_stock < defaultYellowThreshold ? "bg-warning" : "bg-success") + " text-white fw-bold"}>{r.gap_stock}</td>
+                    <td>{r.kebutuhan}</td>
+                    <td>{r.min_stock_requirement_b}</td>
+                    <td>{r.on_delivery_c}</td>
                   </tr>
                 ))}
-                {/* Total Row */}
-                <tr className="fw-bold">
-                  <td className="bg-abu">Total</td>
-                  <td className="bg-abu">588</td>
-                  <td className="bg-abu">147</td>
-                  <td className="bg-abu">3108</td>
-                  <td className="bg-abu">1505</td>
-                  <td className="bg-abu">504</td>
-                </tr>
+                {!loading && !error && rows.length > 0 && (
+                  <tr className="fw-bold">
+                    <td className="bg-abu">Total</td>
+                    <td className="bg-abu">{rows.reduce((a, b) => a + (Number(b.total_stock_a)||0), 0)}</td>
+                    <td className="bg-abu">{rows.reduce((a, b) => a + (Number(b.gap_stock)||0), 0)}</td>
+                    <td className="bg-abu">{rows.reduce((a, b) => a + (Number(b.kebutuhan)||0), 0)}</td>
+                    <td className="bg-abu">{rows.reduce((a, b) => a + (Number(b.min_stock_requirement_b)||0), 0)}</td>
+                    <td className="bg-abu">{rows.reduce((a, b) => a + (Number(b.on_delivery_c)||0), 0)}</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

@@ -20,8 +20,15 @@ export default function RequestOutbound() {
   const [meta, setMeta] = useState({ current_page: 1, per_page: 15, total: 0, last_page: 1 });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  // (Chat removed per request)
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [chatWith, setChatWith] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const pollTimerRef = useRef(null);
+  const lastMsgIdRef = useRef(null);
+  const messagesRef = useRef([]);
 
   // === Date Range State ===
   const [range, setRange] = useState([
@@ -91,6 +98,26 @@ export default function RequestOutbound() {
     fetchShipments();
   }, [currentPage, entriesPerPage]);
 
+  // Fetch current user to determine bubble direction
+  useEffect(() => {
+    const fetchMe = async () => {
+      try {
+        const res = await axios.get(`${API_BASE_URL}/api/me`);
+        const me = res.data?.user || null;
+        setCurrentUserId(me?.id || null);
+      } catch (e) {
+        // ignore; will still show messages without directional mapping
+        console.error(e);
+      }
+    };
+    fetchMe();
+  }, [API_BASE_URL]);
+
+  // Keep latest messages in a ref to avoid stale closure in setInterval
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
   const totalData = meta.total || 0;
   const startRange = (currentPage - 1) * entriesPerPage + 1;
   const endRange = Math.min(currentPage * entriesPerPage, totalData);
@@ -128,7 +155,100 @@ export default function RequestOutbound() {
     return format(d, "yyyy-MM-dd HH:mm:ss");
   };
 
-  // (Chat handlers removed per request)
+  const mapToUiMessages = (arr) => {
+    return (arr || []).map((m) => ({
+      id: m.id,
+      type: m?.sender?.id && currentUserId && m.sender.id === currentUserId ? "sent" : "received",
+      text: m.text,
+      time: m.created_at ? format(new Date(m.created_at), "HH:mm") : "",
+    }));
+  };
+
+  const markRead = async (shipmentId, lastId) => {
+    try {
+      await axios.post(`${API_BASE_URL}/api/shipments/${shipmentId}/messages/read`,
+        lastId ? { last_read_id: lastId } : {}
+      );
+    } catch (e) {
+      // ignore mark read errors
+      console.error(e);
+    }
+  };
+
+  const fetchMessages = async (shipmentId) => {
+    setIsLoadingMessages(true);
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/shipments/${shipmentId}/messages`, {
+        params: { limit: 50 },
+      });
+      const list = res.data?.data || [];
+      setMessages(mapToUiMessages(list));
+      if (list.length > 0) {
+        lastMsgIdRef.current = list[list.length - 1].id;
+        await markRead(shipmentId, lastMsgIdRef.current);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoadingMessages(false);
+    }
+  };
+
+  const stopPolling = () => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  };
+
+  const startPolling = (shipmentId) => {
+    stopPolling();
+    pollTimerRef.current = setInterval(async () => {
+      try {
+        const params = { limit: 50 };
+        if (lastMsgIdRef.current) params.after = String(lastMsgIdRef.current);
+        const res = await axios.get(`${API_BASE_URL}/api/shipments/${shipmentId}/messages`, { params });
+        const list = res.data?.data || [];
+        if (!Array.isArray(list) || list.length === 0) return;
+        const existingIds = new Set((messagesRef.current || []).map((m) => m.id));
+        const newRaw = list.filter((m) => !existingIds.has(m.id));
+        if (newRaw.length > 0) {
+          const mapped = mapToUiMessages(newRaw);
+          setMessages((prev) => [...prev, ...mapped]);
+          lastMsgIdRef.current = list[list.length - 1].id;
+          await markRead(shipmentId, lastMsgIdRef.current);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }, 5000);
+  };
+
+  const openMessage = async (row) => {
+    setChatWith(row);
+    setShowMessageModal(true);
+    await fetchMessages(row.id);
+    startPolling(row.id);
+  };
+
+  const handleSend = async () => {
+    const msg = newMessage.trim();
+    if (!msg || !chatWith?.id) return;
+    try {
+      const res = await axios.post(`${API_BASE_URL}/api/shipments/${chatWith.id}/messages`, { text: msg });
+      const m = res.data?.data;
+      if (m) {
+        const mapped = mapToUiMessages([m]);
+        setMessages((prev) => [...prev, ...mapped]);
+        lastMsgIdRef.current = m.id;
+        await markRead(chatWith.id, lastMsgIdRef.current);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setNewMessage("");
+    }
+  };
 
   return (
     <>
@@ -294,6 +414,7 @@ export default function RequestOutbound() {
                         <button
                           className="btn btn-sm p-1"
                           style={{ backgroundColor: "transparent", border: "none" }}
+                          onClick={() => openMessage(s)}
                         >
                           <img src="/assets/ChatTeardropText.svg" alt="Chat" style={{ width: "20px", height: "20px" }} />
                         </button>
@@ -393,7 +514,57 @@ export default function RequestOutbound() {
           </div>
         </div>
       </div>
-      {/* Chat modal removed per request */}
+      {/* === Message Modal === */}
+      {showMessageModal && (
+        <div className="modal-overlay" onClick={() => { setShowMessageModal(false); stopPolling(); }}>
+          <div className="message-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="message-header">
+              <div className="d-flex align-items-center">
+                <div className="me-2 rounded-circle bg-light" style={{ width: 40, height: 40 }}></div>
+                <div>
+                  <div className="fw-semibold small">
+                    {chatWith?.pic?.name || "Jacob Runturambi"}
+                  </div>
+                  <div className="text-muted extra-small">
+                    {chatWith?.pic?.email || "jacob.runturambi@gmail.com"}
+                  </div>
+                </div>
+              </div>
+              <button className="btn btn-sm" onClick={() => { setShowMessageModal(false); stopPolling(); }} aria-label="Close">
+                <span>&times;</span>
+              </button>
+            </div>
+
+            <div className="message-body">
+              {isLoadingMessages && (
+                <div className="text-center text-muted extra-small mb-2">Memuat pesan...</div>
+              )}
+              {messages.map((m) => (
+                <div key={m.id} className={`msg-row ${m.type}`}>
+                  <div className={`msg-bubble ${m.type}`}>
+                    <div className="msg-text">{m.text}</div>
+                    <div className="msg-meta">{m.time}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="message-input">
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Type your message here..."
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSend();
+                }}
+              />
+              <button className="btn btn-danger send-btn" onClick={handleSend}>Send</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
