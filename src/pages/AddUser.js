@@ -155,7 +155,7 @@ export default function AddUser({ onSaved, onCancel }) {
             </div>
 
             <div className="col-md-6">
-              <label className="form-label">Address</label>
+              <label className="form-label">Asal</label>
               <input name="address" value={form.address} onChange={handleChange} className={`form-control ${fieldErrors.address ? 'is-invalid' : ''}`} />
               {fieldErrors.address && <small className="text-danger">{fieldErrors.address}</small>}
             </div>

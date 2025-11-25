@@ -6,6 +6,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
+import Notifications from "./pages/Notifications";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
@@ -81,6 +82,9 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/" element={<Navigate to="/minitok-ont/rekap" />} />
+
+        {/* Notifications (Messages only) */}
+        <Route path="/notifications" element={<PrivateRoute><Notifications /></PrivateRoute>} />
 
         {/* Protected Dashboard routes */}
         <Route path="/minitok-ont/:subtab" element={<PrivateRoute><Dashboard /></PrivateRoute>} />

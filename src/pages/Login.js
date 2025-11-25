@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import "./style.css";
+import { postActivityLog } from "../api/activityLogs";
 
 export default function Login() {
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8000";
@@ -44,6 +46,14 @@ export default function Login() {
         localStorage.setItem("auth_token", token);
         axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
         toast.success("Login berhasil");
+        try {
+          const meRes = await axios.get(`${API_BASE_URL}/api/me`);
+          const me = meRes.data?.user;
+          if (me?.id) {
+            try { localStorage.setItem("current_user_id", String(me.id)); } catch (_) {}
+            await postActivityLog({ user_id: me.id, activity: "Login aplikasi", timestamp: new Date().toISOString() });
+          }
+        } catch (_) {}
         navigate("/minitok-ont/rekap", { replace: true });
       }
     } catch (e) {
@@ -65,50 +75,54 @@ export default function Login() {
   };
 
   return (
-    <div className="container mt-5" style={{ maxWidth: 480 }}>
-      <div className="bg-white table-container-rounded p-4">
-        <h4 className="mb-3">Login</h4>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-3">
-            <label className="form-label">Email</label>
-            <input
-              name="email"
-              type="email"
-              value={form.email}
-              onChange={handleChange}
-              className={`form-control ${fieldErrors.email ? "is-invalid" : ""}`}
-            />
-            {fieldErrors.email && <small className="text-danger">{fieldErrors.email}</small>}
-          </div>
-          <div className="mb-3">
-            <label className="form-label">Password</label>
-            <div className="input-group">
+    <div className="login-split">
+      {/* Left: Form */}
+      <div className="login-left">
+        <div className="login-form-box">
+          <h2 className="login-title">Welcome Back</h2>
+          <p className="login-subtitle">Welcome back! Please enter your details.</p>
+
+          <form onSubmit={handleSubmit} className="login-form">
+            <div className="mb-3">
+              <label className="form-label">Email</label>
+              <input
+                name="email"
+                type="email"
+                placeholder="Enter your email"
+                value={form.email}
+                onChange={handleChange}
+                className={`form-control ${fieldErrors.email ? "is-invalid" : ""}`}
+              />
+              {fieldErrors.email && (
+                <small className="text-danger">{fieldErrors.email}</small>
+              )}
+            </div>
+
+            <div className="mb-3">
+              <label className="form-label">Password</label>
               <input
                 name="password"
                 type={showPassword ? "text" : "password"}
+                placeholder="Enter your password"
                 value={form.password}
                 onChange={handleChange}
                 className={`form-control ${fieldErrors.password ? "is-invalid" : ""}`}
               />
-              <button
-                type="button"
-                className="btn btn-outline-secondary"
-                aria-label="Toggle password visibility"
-                onClick={() => setShowPassword((s) => !s)}
-              >
-                <i className={`fa-solid ${showPassword ? "fa-eye-slash" : "fa-eye"}`}></i>
-              </button>
+              {fieldErrors.password && (
+                <small className="text-danger">{fieldErrors.password}</small>
+              )}
             </div>
-            {fieldErrors.password && <small className="text-danger">{fieldErrors.password}</small>}
-          </div>
 
-          <div className="d-flex justify-content-between align-items-center">
-            <button className="btn btn-danger" type="submit" disabled={loading}>
-              {loading ? "Loading..." : "Login"}
+            <button className="btn btn-danger login-button" type="submit" disabled={loading}>
+              {loading ? "Loading..." : "Sign In"}
             </button>
-            <Link to="/register" className="btn btn-link">Belum punya akun?</Link>
-          </div>
-        </form>
+          </form>
+        </div>
+      </div>
+
+      {/* Right: Image */}
+      <div className="login-right">
+        <img src="/assets/TelkomTower.jpg" alt="Telkom Tower" className="login-image" />
       </div>
     </div>
   );

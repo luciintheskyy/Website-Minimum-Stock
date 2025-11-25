@@ -24,12 +24,17 @@ export default function Dashboard() {
 
   const [activeMenu, setActiveMenu] = useState("Minitok ONT");
   const [activeDropdown, setActiveDropdown] = useState(null);
-  const [notificationCount] = useState(3);
+  const [notificationCount, setNotificationCount] = useState(0);
   const [lastUpdate, setLastUpdate] = useState("");
   const dropdownContainerRef = useRef(null);
+  const notifContainerRef = useRef(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [activityLogs, setActivityLogs] = useState([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsMeta, setLogsMeta] = useState({ current_page: 1, per_page: 15, total: 0 });
 
   const menus = [
     "Minitok ONT",
@@ -117,6 +122,9 @@ export default function Dashboard() {
         const res = await axios.get(`${API_BASE_URL}/api/me`);
         const me = res.data?.user || null;
         setCurrentUser(me);
+        if (me?.id) {
+          try { localStorage.setItem("current_user_id", String(me.id)); } catch (_) {}
+        }
       } catch (e) {
         // ignore; handled by 401 interceptor if unauthenticated
         console.error(e);
@@ -173,6 +181,19 @@ export default function Dashboard() {
     };
   }, []);
 
+  // Tutup dropdown notifikasi saat klik di luar area bell/menu
+  useEffect(() => {
+    const handleClickOutsideNotif = (event) => {
+      if (notifContainerRef.current && !notifContainerRef.current.contains(event.target)) {
+        setNotifOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutsideNotif);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutsideNotif);
+    };
+  }, []);
+
   return (
     <div className="container-fluid bg-white min-vh-100">
       {/* === Header (Fixed di Top) === */}
@@ -220,17 +241,21 @@ export default function Dashboard() {
 
           {/*Notification & Profile */}
           <div className="d-flex align-items-center" style={{ gap: "8px" }}>
-            <div className="position-relative">
-              <button
-                className="btn btn-light p-2 d-flex justify-content-center align-items-center"
-                style={{ backgroundColor: "white", borderColor: "white" }}
-              >
-                <img
-                  src="/assets/Bell.svg"
-                  alt="Notifokasi"
-                  style={{ width: "24px", height: "24px" }}
-                />
-              </button>
+          <div className="position-relative" ref={notifContainerRef}>
+            <button
+              className="btn btn-light p-2 d-flex justify-content-center align-items-center"
+              style={{ backgroundColor: "white", borderColor: "white" }}
+              onClick={() => {
+                // Redirect ke halaman Notifications (Messages)
+                navigate("/notifications");
+              }}
+            >
+              <img
+                src="/assets/Bell.svg"
+                alt="Notifokasi"
+                style={{ width: "24px", height: "24px" }}
+              />
+            </button>
               {notificationCount > 0 && (
                 <span
                   className="position-absolute badge rounded-pill bg-danger"
@@ -255,48 +280,33 @@ export default function Dashboard() {
               </button>
               {profileMenuOpen && (
                 <div
-                  className="dropdown-menu dropdown-menu-end show"
+                  className="profile-menu-panel"
                   style={{ position: "absolute", right: 0, top: "60px" }}
                 >
-                  <div className="px-3 py-2" style={{ minWidth: 220 }}>
-                    <div className="d-flex align-items-center mb-2">
-                      <img
-                        src={currentUser?.profile_picture_url || "/assets/ProfilePicture.svg"}
-                        alt="Profile"
-                        style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover" }}
-                      />
-                      <div className="ms-2">
-                        <div className="fw-semibold" style={{ lineHeight: 1.2 }}>
-                          {currentUser ? `${currentUser.first_name} ${currentUser.last_name}` : "User"}
-                        </div>
-                        <small className="text-muted">{currentUser?.role?.name || ""}</small>
-                      </div>
-                    </div>
-                    <button
-                      className="dropdown-item d-flex align-items-center"
-                      onClick={() => {
-                        if (currentUser) {
-                          const mapped = mapMeToEditUser(currentUser);
-                          setSelectedUser(mapped);
-                          setActiveMenu("Edit User");
-                        }
-                        setProfileMenuOpen(false);
-                      }}
-                    >
-                      <i className="fa-solid fa-user-pen me-2"></i>
-                      Update Profile
-                    </button>
-                    <button
-                      className="dropdown-item d-flex align-items-center text-danger"
-                      onClick={() => {
-                        setProfileMenuOpen(false);
-                        logoutNow();
-                      }}
-                    >
-                      <i className="fa-solid fa-right-from-bracket me-2"></i>
-                      Logout
-                    </button>
-                  </div>
+                  <button
+                    className="profile-menu-item"
+                    onClick={() => {
+                      if (currentUser) {
+                        const mapped = mapMeToEditUser(currentUser);
+                        setSelectedUser(mapped);
+                        setActiveMenu("Edit User");
+                      }
+                      setProfileMenuOpen(false);
+                    }}
+                  >
+                    <i className="fa-regular fa-user me-2"></i>
+                    <span>Account</span>
+                  </button>
+                  <button
+                    className="profile-menu-item"
+                    onClick={() => {
+                      setProfileMenuOpen(false);
+                      logoutNow();
+                    }}
+                  >
+                    <i className="fa-solid fa-right-from-bracket me-2"></i>
+                    <span>Sign Out</span>
+                  </button>
                 </div>
               )}
             </div>
@@ -385,6 +395,58 @@ export default function Dashboard() {
           />
         )}
       </main>
+      {notifOpen && (
+        <div
+          className="profile-menu-panel"
+          style={{ position: "absolute", right: 74, top: 76, width: 360 }}
+          role="dialog"
+          aria-label="Notifications"
+        >
+          <div className="d-flex justify-content-between align-items-center px-3 pt-3">
+            <h6 className="mb-0">Notifications</h6>
+            <button className="btn btn-sm" onClick={() => setNotifOpen(false)} aria-label="Close notifications">
+              ×
+            </button>
+          </div>
+          <div className="px-3 d-flex gap-4 border-bottom mt-2">
+            <button className="btn btn-link text-dark" style={{ textDecoration: "none" }}>General</button>
+            <button className="btn btn-link text-danger" style={{ textDecoration: "none", borderBottom: "2px solid #CB3A31" }}>Messages</button>
+          </div>
+          <div className="px-3 py-2" style={{ maxHeight: 360, overflowY: "auto" }}>
+            {logsLoading ? (
+              <div className="text-center text-muted py-3">Loading...</div>
+            ) : activityLogs.length === 0 ? (
+              <div className="text-center text-muted py-3">Tidak ada aktivitas</div>
+            ) : (
+              activityLogs.map((log) => (
+                <div key={log.id} className="d-flex align-items-start gap-3 py-3 border-bottom">
+                  <img src="/assets/ProfilePicture.svg" alt="avatar" style={{ width: 36, height: 36, borderRadius: "50%" }} />
+                  <div className="flex-grow-1">
+                    <div><span className="fw-semibold">{String(log.user.first_name) + ' ' + String(log.user.last_name)}</span> telah {log.activity}</div>
+                    <div className="text-muted small">{formatRelative(log.timestamp || log.created_at)}</div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+function formatRelative(iso) {
+  try {
+    const d = iso ? new Date(iso) : new Date();
+    const diffMs = Date.now() - d.getTime();
+    const min = Math.floor(diffMs / 60000);
+    if (min < 1) return "just now";
+    if (min < 60) return `${min} min ago`;
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return `${hr} hr ago`;
+    const day = Math.floor(hr / 24);
+    return `${day} day${day > 1 ? "s" : ""} ago`;
+  } catch {
+    return iso || "";
+  }
 }
