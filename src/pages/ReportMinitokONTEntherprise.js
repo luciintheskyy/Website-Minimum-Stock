@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
+import * as XLSX from "xlsx";
+import { toast } from "react-toastify";
+import { format, parseISO } from "date-fns";
+import Swal from "sweetalert2";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./style.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
@@ -16,13 +20,66 @@ export default function ReportMinitokONTEntherprise() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const uploadInputRef = useRef(null);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
+  const [editForm, setEditForm] = useState({ type: "", warehouse: "", tanggal_pengiriman: "", tanggal_sampai: "", batch: "" });
+  const [editFile, setEditFile] = useState(null);
+  const [submittingEdit, setSubmittingEdit] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedBatch, setSelectedBatch] = useState(null);
+  const [selectedTreg, setSelectedTreg] = useState(null);
+  const fmtDate = (v) => {
+    if (!v) return "-";
+    try {
+      const d = typeof v === "string" ? parseISO(v) : new Date(v);
+      if (isNaN(d)) return v;
+      return format(d, "dd/MM/yyyy");
+    } catch (_) {
+      return v || "-";
+    }
+  };
+  const toDateInput = (v) => {
+    if (!v) return "";
+    const s = String(v);
+    return s.length >= 10 ? s.slice(0, 10) : s;
+  };
+  const deleteReport = async (id) => {
+    if (!id) return;
+    const token = localStorage.getItem("auth_token");
+    const res = await Swal.fire({
+      title: "Hapus data?",
+      text: "Tindakan ini tidak dapat dibatalkan",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#6c757d",
+      confirmButtonText: "Ya, hapus",
+      cancelButtonText: "Batal",
+    });
+    if (!res.isConfirmed) return;
+    try {
+      await axios.delete(`${API_BASE_URL}/api/reports/${id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      setReports((prev) => prev.filter((r) => r.id !== id));
+      setTotalData((prev) => Math.max(0, prev - 1));
+      toast.success("Data report dihapus");
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Gagal menghapus data");
+    }
+  };
 
   const toggleDropdown = (type) => {
     setActiveDropdown((prev) => (prev === type ? null : type));
   };
 
   const handleOptionSelect = (option) => {
-    console.log("Selected:", option);
+    if (activeDropdown === "batch") {
+      setSelectedBatch(option);
+    } else if (activeDropdown === "treg") {
+      setSelectedTreg(option);
+    }
     setActiveDropdown(null);
   };
 
@@ -63,9 +120,9 @@ export default function ReportMinitokONTEntherprise() {
       }
     };
     fetchReports();
-  }, [API_BASE_URL, entriesPerPage, currentPage]);
+  }, [API_BASE_URL, entriesPerPage, currentPage, reloadToken]);
 
-  const downloadTemplateCSV = () => {
+  const downloadTemplateXLSX = () => {
     const headers = [
       "type",
       "qty",
@@ -79,17 +136,20 @@ export default function ReportMinitokONTEntherprise() {
       "tanggal_sampai",
       "batch",
     ];
-    const csv = headers.join(",") + "\n";
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([headers]);
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `template_report_${jenis}.csv`;
+    a.download = `template_report_${jenis}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const exportCSV = async () => {
+  const exportXLSX = async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/reports`, {
         params: { jenis, per_page: 200, page: 1 },
@@ -112,13 +172,16 @@ export default function ReportMinitokONTEntherprise() {
         "created_at",
         "updated_at",
       ];
-      const rows = all.map((r) => headers.map((h) => (r[h] ?? "")).join(","));
-      const csv = headers.join(",") + "\n" + rows.join("\n");
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const aoa = [headers, ...all.map((r) => headers.map((h) => r[h] ?? ""))];
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      XLSX.utils.book_append_sheet(wb, ws, `Report_${jenis}`);
+      const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      const blob = new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `export_report_${jenis}.csv`;
+      a.download = `export_report_${jenis}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
@@ -131,36 +194,47 @@ export default function ReportMinitokONTEntherprise() {
   const handleFileSelected = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const isCSV = file.name.toLowerCase().endsWith(".csv");
     try {
-      if (isCSV) {
-        const text = await file.text();
-        const lines = text.split(/\r?\n/).filter((l) => l.trim().length);
-        const headers = lines.shift().split(",");
-        const items = lines.map((line) => {
-          const cols = line.split(",");
-          const obj = {};
-          headers.forEach((h, i) => (obj[h.trim()] = (cols[i] || "").trim()));
-          obj.qty = parseInt(obj.qty || "0", 10);
-          obj.warehouse = obj.warehouse || null;
-          obj.sender_alamat = obj.sender_alamat || null;
-          obj.sender_pic = obj.sender_pic || null;
-          obj.receiver_alamat = obj.receiver_alamat || null;
-          obj.receiver_warehouse = obj.receiver_warehouse || null;
-          obj.receiver_pic = obj.receiver_pic || null;
-          obj.tanggal_pengiriman = obj.tanggal_pengiriman || null;
-          obj.tanggal_sampai = obj.tanggal_sampai || null;
-          obj.batch = obj.batch || null;
-          return obj;
-        });
-        await axios.post(`${API_BASE_URL}/api/reports`, { jenis, items });
-        alert(`Import berhasil: ${items.length} item`);
-      } else {
-        alert("Format tidak didukung. Gunakan CSV untuk saat ini.");
-      }
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: "array", cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+      const toStr = (v) => (v == null ? "" : String(v));
+      const toDateStr = (v) => {
+        if (!v) return "";
+        if (v instanceof Date) return v.toISOString().slice(0, 10);
+        if (typeof v === "number") {
+          const p = XLSX.SSF.parse_date_code(v);
+          if (!p) return String(v);
+          const yyyy = String(p.y).padStart(4, "0");
+          const mm = String(p.m).padStart(2, "0");
+          const dd = String(p.d).padStart(2, "0");
+          return `${yyyy}-${mm}-${dd}`;
+        }
+        if (typeof v === "string") return v.length >= 10 ? v.slice(0, 10) : v;
+        return "";
+      };
+      const items = rows.map((row) => ({
+        type: toStr(row.type),
+        qty: parseInt(row.qty || "0", 10),
+        warehouse: toStr(row.warehouse),
+        sender_alamat: toStr(row.sender_alamat),
+        sender_pic: toStr(row.sender_pic),
+        receiver_alamat: toStr(row.receiver_alamat),
+        receiver_warehouse: toStr(row.receiver_warehouse),
+        receiver_pic: toStr(row.receiver_pic),
+        tanggal_pengiriman: toDateStr(row.tanggal_pengiriman),
+        tanggal_sampai: toDateStr(row.tanggal_sampai),
+        batch: toStr(row.batch),
+      }));
+      const resConfirm = await Swal.fire({ title: "Konfirmasi import", text: `Import ${items.length} item?`, icon: "question", showCancelButton: true, confirmButtonText: "Ya, import", cancelButtonText: "Batal" });
+      if (!resConfirm.isConfirmed) return;
+      await axios.post(`${API_BASE_URL}/api/reports`, { jenis, items });
+      toast.success(`Import berhasil: ${items.length} item`);
+      setReloadToken((t) => t + 1);
     } catch (err) {
       console.error(err);
-      alert("Gagal import data");
+      toast.error("Gagal import data");
     } finally {
       e.target.value = "";
     }
@@ -181,6 +255,8 @@ export default function ReportMinitokONTEntherprise() {
           placeholder="Search..."
           className="form-control"
           style={{ width: "300px" }}
+          value={searchTerm}
+          onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
         />
 
         <div className="d-flex align-items-center gap-2 flex-nowrap ms-auto">
@@ -299,7 +375,7 @@ export default function ReportMinitokONTEntherprise() {
                     key={i}
                     onClick={(e) => {
                       e.stopPropagation();
-                      exportCSV();
+                      exportXLSX();
                     }}
                     className="dropdown-item text-start px-3 py-2 small"
                   >
@@ -311,7 +387,7 @@ export default function ReportMinitokONTEntherprise() {
           </div>
 
           {/* Download Template */}
-          <button onClick={downloadTemplateCSV}
+          <button onClick={downloadTemplateXLSX}
             className="btn d-flex align-items-center justify-content-between px-3 text-dark"
             style={{
               backgroundColor: "#EEF2F6",
@@ -331,7 +407,7 @@ export default function ReportMinitokONTEntherprise() {
           </button>
 
           {/* Upload Pengiriman */}
-          <input ref={uploadInputRef} type="file" accept=".csv" style={{ display: "none" }} onChange={handleFileSelected} />
+          <input ref={uploadInputRef} type="file" accept=".xlsx" style={{ display: "none" }} onChange={handleFileSelected} />
           <button onClick={openUpload}
             className="btn d-flex align-items-center justify-content-between px-3 text-dark"
             style={{
@@ -423,31 +499,49 @@ export default function ReportMinitokONTEntherprise() {
                 {!loading && !error && reports.length === 0 && (
                   <tr><td colSpan={12} className="text-center">Tidak ada data</td></tr>
                 )}
-                {!loading && !error && reports.map((r, idx) => (
-                  <tr key={r.id || idx}>
-                    <td>{(currentPage - 1) * entriesPerPage + idx + 1}</td>
-                    <td>{r.type}</td>
-                    <td>{r.qty}</td>
-                    <td>{r.sender_alamat || '-'}</td>
-                    <td>{r.sender_pic || '-'}</td>
-                    <td>{r.receiver_alamat || '-'}</td>
-                    <td>{r.receiver_warehouse || '-'}</td>
-                    <td>{r.receiver_pic || '-'}</td>
-                    <td>{r.tanggal_pengiriman || '-'}</td>
-                    <td>{r.tanggal_sampai || '-'}</td>
-                    <td>{r.batch || '-'}</td>
-                    <td>
-                      <div className="d-flex justify-content-center gap-2">
-                        <button className="btn btn-sm p-1" style={{ backgroundColor: "transparent", border: "none" }}>
-                          <img src="/assets/NotePencil.svg" alt="Edit" style={{ width: "20px", height: "20px" }} />
-                        </button>
-                        <button className="btn btn-sm p-1" style={{ backgroundColor: "transparent", border: "none" }}>
-                          <img src="/assets/Trash.svg" alt="Delete" style={{ width: "20px", height: "20px" }} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {!loading && !error && (() => {
+                  const term = searchTerm.trim().toLowerCase();
+                  const bySearch = (x) => {
+                    if (!term) return true;
+                    const fields = [x.type, x.warehouse, x.sender_alamat, x.sender_pic, x.receiver_alamat, x.receiver_warehouse, x.receiver_pic, x.batch];
+                    return fields.some((f) => String(f || "").toLowerCase().includes(term));
+                  };
+                  const byBatch = (x) => {
+                    if (!selectedBatch) return true;
+                    return String(x.batch || "").toLowerCase().includes(String(selectedBatch).toLowerCase());
+                  };
+                  const byTreg = (x) => {
+                    if (!selectedTreg) return true;
+                    const t = String(selectedTreg).toLowerCase();
+                    return String(x.receiver_warehouse || x.warehouse || "").toLowerCase().includes(t);
+                  };
+                  const filtered = reports.filter((x) => bySearch(x) && byBatch(x) && byTreg(x));
+                  return filtered.map((r, idx) => (
+                    <tr key={r.id || idx}>
+                      <td>{(currentPage - 1) * entriesPerPage + idx + 1}</td>
+                      <td>{r.type}</td>
+                      <td>{r.qty}</td>
+                      <td>{r.sender_alamat || '-'}</td>
+                      <td>{r.sender_pic || '-'}</td>
+                      <td>{r.receiver_alamat || '-'}</td>
+                      <td>{r.receiver_warehouse || '-'}</td>
+                      <td>{r.receiver_pic || '-'}</td>
+                      <td>{fmtDate(r.tanggal_pengiriman)}</td>
+                      <td>{fmtDate(r.tanggal_sampai)}</td>
+                      <td>{r.batch || '-'}</td>
+                      <td>
+                        <div className="d-flex justify-content-center gap-2">
+                          <button className="btn btn-sm p-1" style={{ backgroundColor: "transparent", border: "none" }} onClick={() => { setEditTarget(r); setEditForm({ type: r.type || "", warehouse: r.receiver_warehouse || r.warehouse || "", tanggal_pengiriman: toDateInput(r.tanggal_pengiriman || ""), tanggal_sampai: toDateInput(r.tanggal_sampai || ""), batch: r.batch || "" }); setEditFile(null); setShowEdit(true); }}>
+                            <img src="/assets/NotePencil.svg" alt="Edit" style={{ width: "20px", height: "20px" }} />
+                          </button>
+                          <button className="btn btn-sm p-1" style={{ backgroundColor: "transparent", border: "none" }} onClick={() => deleteReport(r.id)}>
+                            <img src="/assets/Trash.svg" alt="Delete" style={{ width: "20px", height: "20px" }} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ));
+                })()}
               </tbody>
             </table>
           </div>
@@ -533,6 +627,77 @@ export default function ReportMinitokONTEntherprise() {
           </div>
         </div>
       </div>
+
+      {showEdit && (
+        <div className="modal-overlay" onClick={() => setShowEdit(false)}>
+          <div className="message-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="message-header">
+              <div className="fw-semibold">Edit Data</div>
+              <button className="btn btn-sm" onClick={() => setShowEdit(false)} aria-label="Close">
+                <span>&times;</span>
+              </button>
+            </div>
+            <div className="message-body">
+              <div className="row g-3">
+                <div className="col-md-6">
+                  <label className="form-label">Type</label>
+                  <input className="form-control" value={editForm.type} onChange={(e) => setEditForm((p) => ({ ...p, type: e.target.value }))} />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Warehouse</label>
+                  <input className="form-control" value={editForm.warehouse} onChange={(e) => setEditForm((p) => ({ ...p, warehouse: e.target.value }))} />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Tanggal Pengiriman</label>
+                  <input type="date" className="form-control" value={editForm.tanggal_pengiriman} onChange={(e) => setEditForm((p) => ({ ...p, tanggal_pengiriman: e.target.value }))} />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Tanggal Sampai</label>
+                  <input type="date" className="form-control" value={editForm.tanggal_sampai} onChange={(e) => setEditForm((p) => ({ ...p, tanggal_sampai: e.target.value }))} />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Nomor IDO/GD</label>
+                  <input className="form-control" value={editForm.batch} onChange={(e) => setEditForm((p) => ({ ...p, batch: e.target.value }))} />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Upload SN/MAC Hasil Barcode</label>
+                  <input type="file" className="form-control" accept="image/*" onChange={(e) => setEditFile(e.target.files?.[0] || null)} />
+                </div>
+              </div>
+            </div>
+            <div className="message-input d-flex justify-content-end gap-2">
+              <button className="btn btn-light" onClick={() => setShowEdit(false)}>Cancel</button>
+              <button className="btn btn-danger" disabled={submittingEdit} onClick={async () => {
+                if (!editTarget?.id) return;
+                const confirm = await Swal.fire({ title: "Simpan perubahan?", icon: "question", showCancelButton: true, confirmButtonText: "Ya, simpan", cancelButtonText: "Batal" });
+                if (!confirm.isConfirmed) return;
+                setSubmittingEdit(true);
+                try {
+                  let resp;
+                  if (editFile) {
+                    const fd = new FormData();
+                    Object.entries(editForm).forEach(([k, v]) => fd.append(k, v || ""));
+                    fd.append("sn_mac_picture", editFile);
+                    resp = await axios.patch(`${API_BASE_URL}/api/reports/${editTarget.id}`, fd, { headers: { "Content-Type": "multipart/form-data" } });
+                  } else {
+                    resp = await axios.patch(`${API_BASE_URL}/api/reports/${editTarget.id}`, editForm);
+                  }
+                  const updated = resp.data?.body || resp.data?.data || resp.data;
+                  if (updated && updated.id) {
+                    setReports((prev) => prev.map((r) => (r.id === updated.id ? { ...r, ...updated } : r)));
+                    setShowEdit(false);
+                    toast.success("Data report berhasil diupdate");
+                  }
+                } catch (e) {
+                  toast.error(e.response?.data?.message || "Gagal update report");
+                } finally {
+                  setSubmittingEdit(false);
+                }
+              }}>Submit</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

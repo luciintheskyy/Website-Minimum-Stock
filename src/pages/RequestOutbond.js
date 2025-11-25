@@ -225,6 +225,13 @@ export default function RequestOutbound() {
   };
 
   const openMessage = async (row) => {
+    // Hentikan polling chat sebelumnya dan reset state pesan agar tidak nyangkut
+    stopPolling();
+    setIsLoadingMessages(true);
+    setMessages([]);
+    messagesRef.current = [];
+    lastMsgIdRef.current = null;
+    setNewMessage("");
     setChatWith(row);
     setShowMessageModal(true);
     await fetchMessages(row.id);
@@ -526,7 +533,7 @@ export default function RequestOutbound() {
                     {chatWith?.pic?.name || "Jacob Runturambi"}
                   </div>
                   <div className="text-muted extra-small">
-                    {chatWith?.pic?.email || "jacob.runturambi@gmail.com"}
+                    {chatWith?.pic?.email}
                   </div>
                 </div>
               </div>

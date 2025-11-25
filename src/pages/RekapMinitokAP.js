@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
+import * as XLSX from "xlsx";
+import Swal from "sweetalert2";
+import { toast } from "react-toastify";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./style.css";
 
@@ -13,6 +16,8 @@ export default function RekapMinitokAP() {
   const [percentage, setPercentage] = useState(0);
   const [counts, setCounts] = useState({ red: 0, yellow: 0, green: 0 });
   const [rows, setRows] = useState([]);
+  const uploadInputRef = useRef(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   // Default parameter global sesuai dokumentasi
   const defaultMinStock = 215; // B
@@ -54,15 +59,114 @@ export default function RekapMinitokAP() {
       }
     };
     fetchSummary();
-  }, [API_BASE_URL]);
+  }, [API_BASE_URL, reloadToken]);
 
   const toggleDropdown = (type) => {
     setActiveDropdown((prev) => (prev === type ? null : type));
   };
 
   const handleOptionSelect = (option) => {
-    console.log("Selected:", option);
     setActiveDropdown(null);
+    if (option === "Export Data" || option === "Export All Data") {
+      exportXLSX();
+    } else if (
+      option === "Upload File Stock" ||
+      option === "Upload File Delivery" ||
+      option === "Upload File Minimum Stock"
+    ) {
+      openUpload();
+    }
+  };
+
+  const exportXLSX = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/reports`, {
+        params: { jenis: "AP", per_page: 200, page: 1 },
+      });
+      const all = res.data?.data || [];
+      const headers = [
+        "id",
+        "jenis",
+        "type",
+        "qty",
+        "warehouse",
+        "sender_alamat",
+        "sender_pic",
+        "receiver_alamat",
+        "receiver_warehouse",
+        "receiver_pic",
+        "tanggal_pengiriman",
+        "tanggal_sampai",
+        "batch",
+        "created_at",
+        "updated_at",
+      ];
+      const aoa = [headers, ...all.map((r) => headers.map((h) => r[h] ?? ""))];
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      XLSX.utils.book_append_sheet(wb, ws, `Report_AP`);
+      const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      const blob = new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `export_report_AP.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      alert("Gagal export data");
+    }
+  };
+
+  const openUpload = () => uploadInputRef.current?.click();
+  const handleFileSelected = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: "array", cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+      const toStr = (v) => (v == null ? "" : String(v));
+      const toDateStr = (v) => {
+        if (!v) return "";
+        if (v instanceof Date) return v.toISOString().slice(0, 10);
+        if (typeof v === "number") {
+          const p = XLSX.SSF.parse_date_code(v);
+          if (!p) return String(v);
+          const yyyy = String(p.y).padStart(4, "0");
+          const mm = String(p.m).padStart(2, "0");
+          const dd = String(p.d).padStart(2, "0");
+          return `${yyyy}-${mm}-${dd}`;
+        }
+        if (typeof v === "string") return v.length >= 10 ? v.slice(0, 10) : v;
+        return "";
+      };
+      const items = rows.map((row) => ({
+        type: toStr(row.type),
+        qty: parseInt(row.qty || "0", 10),
+        warehouse: toStr(row.warehouse),
+        sender_alamat: toStr(row.sender_alamat),
+        sender_pic: toStr(row.sender_pic),
+        receiver_alamat: toStr(row.receiver_alamat),
+        receiver_warehouse: toStr(row.receiver_warehouse),
+        receiver_pic: toStr(row.receiver_pic),
+        tanggal_pengiriman: toDateStr(row.tanggal_pengiriman),
+        tanggal_sampai: toDateStr(row.tanggal_sampai),
+        batch: toStr(row.batch),
+      }));
+      const resConfirm = await Swal.fire({ title: "Konfirmasi import", text: `Import ${items.length} item?`, icon: "question", showCancelButton: true, confirmButtonText: "Ya, import", cancelButtonText: "Batal" });
+      if (!resConfirm.isConfirmed) return;
+      await axios.post(`${API_BASE_URL}/api/reports`, { jenis: "AP", items });
+      toast.success(`Import berhasil: ${items.length} item`);
+      setReloadToken((t) => t + 1);
+    } catch (err) {
+      console.error(err);
+      toast.error("Gagal import data");
+    } finally {
+      e.target.value = "";
+    }
   };
 
   useEffect(() => {
@@ -256,20 +360,20 @@ export default function RekapMinitokAP() {
                 style={{ width: "16px", height: "16px" }}
               />
             </button>
-            {activeDropdown === "export" && (
-              <div className="position-absolute bg-white border rounded shadow-sm mt-1 w-100 z-3">
-                {["Export Data", "Export All Data"].map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => handleOptionSelect(opt)}
-                    className="dropdown-item text-start px-3 py-2 small"
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          {activeDropdown === "export" && (
+            <div className="position-absolute bg-white border rounded shadow-sm mt-1 w-100 z-3">
+              {["Export Data", "Export All Data"].map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => handleOptionSelect(opt)}
+                  className="dropdown-item text-start px-3 py-2 small"
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
           {/* Upload */}
           <div className="position-relative">
@@ -298,29 +402,31 @@ export default function RekapMinitokAP() {
                 style={{ width: "16px", height: "16px" }}
               />
             </button>
-            {activeDropdown === "upload" && (
-              <div
-                className="position-absolute bg-white border rounded shadow-sm mt-1 w-102 z-3"
-                style={{ right: 0, minWidth: "100%" }}
-              >
-                {[
-                  "Upload File Stock",
-                  "Upload File Delivery",
-                  "Upload File Minimum Stock",
-                ].map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => handleOptionSelect(opt)}
-                    className="dropdown-item text-start px-3 py-2 small"
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          {activeDropdown === "upload" && (
+            <div
+              className="position-absolute bg-white border rounded shadow-sm mt-1 w-102 z-3"
+              style={{ right: 0, minWidth: "100%" }}
+            >
+              {[
+                "Upload File Stock",
+                "Upload File Delivery",
+                "Upload File Minimum Stock",
+              ].map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => handleOptionSelect(opt)}
+                  className="dropdown-item text-start px-3 py-2 small"
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         </div>
       </div>
+
+      <input ref={uploadInputRef} type="file" accept=".xlsx" style={{ display: "none" }} onChange={handleFileSelected} />
 
       {/* === Table === */}
       <div className="mt-4 mb-4">

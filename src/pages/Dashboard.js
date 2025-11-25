@@ -246,26 +246,8 @@ export default function Dashboard() {
               className="btn btn-light p-2 d-flex justify-content-center align-items-center"
               style={{ backgroundColor: "white", borderColor: "white" }}
               onClick={() => {
-                setNotifOpen((prev) => !prev);
-                const uid = currentUser?.id || Number(localStorage.getItem("current_user_id"));
-                setLogsLoading(true);
-                axios
-                  .get(`${API_BASE_URL}/api/activity-logs`, {
-                    params: { user_id: uid || undefined, per_page: 15, page: 1 },
-                  })
-                  .then((res) => {
-                    const data = res.data?.data || [];
-                    const meta = res.data?.meta || { current_page: 1, per_page: 15, total: data.length };
-                    setActivityLogs(data);
-                    setLogsMeta(meta);
-                    setNotificationCount(meta.total || data.length || 0);
-                  })
-                  .catch((e) => {
-                    console.error(e);
-                    setActivityLogs([]);
-                    setNotificationCount(0);
-                  })
-                  .finally(() => setLogsLoading(false));
+                // Redirect ke halaman Notifications (Messages)
+                navigate("/notifications");
               }}
             >
               <img
