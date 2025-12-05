@@ -29,6 +29,9 @@ export default function RequestOutbound() {
   const pollTimerRef = useRef(null);
   const lastMsgIdRef = useRef(null);
   const messagesRef = useRef([]);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingRow, setEditingRow] = useState(null);
+  const [editForm, setEditForm] = useState({ qty: '', alamat_tujuan: '', status: '' });
 
   // === Date Range State ===
   const [range, setRange] = useState([
@@ -238,6 +241,21 @@ export default function RequestOutbound() {
     startPolling(row.id);
   };
 
+  const openEdit = (row) => {
+    setEditingRow(row);
+    setEditForm({ qty: String(row.qty || ''), alamat_tujuan: row.alamat_tujuan || '', status: row.status || '' });
+    setShowEditModal(true);
+  };
+
+  const applyEdit = async () => {
+    // Frontend-only update for demo; real app should call API
+    if (!editingRow) return;
+    const updated = { ...editingRow, qty: parseInt(editForm.qty || '0', 10), alamat_tujuan: editForm.alamat_tujuan, status: editForm.status };
+    setShipments((prev) => prev.map((s) => (s.id === editingRow.id ? updated : s)));
+    setShowEditModal(false);
+    setEditingRow(null);
+  };
+
   const handleSend = async () => {
     const msg = newMessage.trim();
     if (!msg || !chatWith?.id) return;
@@ -259,9 +277,9 @@ export default function RequestOutbound() {
 
   return (
     <>
-      {/* Search Bar + Filters */}
+      {/* Search Bar */}
       <div
-        className="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2"
+        className="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2 rekap-actions"
         ref={dropdownContainerRef}
       >
         <input
@@ -270,60 +288,14 @@ export default function RequestOutbound() {
           className="form-control"
           style={{ width: "300px" }}
         />
-
         <div className="d-flex align-items-center gap-2 flex-nowrap ms-auto">
-          {/* Filters */}
-          <div className="position-relative me-2">
-            <button
-              onClick={() => toggleDropdown("filters")}
-              className="btn d-flex align-items-center justify-content-between px-3 text-dark"
-              style={{
-                backgroundColor: "#EEF2F6",
-                width: "120px",
-                height: "38px",
-                border: "none",
-              }}
-            >
-              <img
-                src="/assets/Sliders.svg"
-                alt="Sliders"
-                className="me-2"
-                style={{ width: "20px", height: "20px" }}
-              />
-              <span>Filters</span>
-              <img
-                src="/assets/CaretDownBold.svg"
-                alt="Caret"
-                className="ms-2"
-                style={{ width: "16px", height: "16px" }}
-              />
-            </button>
-            {activeDropdown === "filters" && (
-              <div className="position-absolute bg-white border rounded shadow-sm mt-1 w-100 z-3">
-                <button
-                  onClick={() => handleOptionSelect("Filter 1")}
-                  className="dropdown-item text-start px-3 py-2 small"
-                >
-                  Filter 1
-                </button>
-                <button
-                  onClick={() => handleOptionSelect("Filter 2")}
-                  className="dropdown-item text-start px-3 py-2 small"
-                >
-                  Filter 2
-                </button>
-              </div>
-            )}
-          </div>
-
           {/* Date Range Picker */}
           <div className="position-relative" ref={calendarRef}>
             <button
-              className="btn d-flex align-items-center justify-content-between px-3 text-dark"
+              className="btn d-flex align-items-center justify-content-between px-3 text-dark btn-standard"
               style={{
                 backgroundColor: "#EEF2F6",
                 minWidth: "230px",
-                height: "38px",
                 border: "none",
                 whiteSpace: "nowrap",
                 overflow: "hidden",
@@ -369,7 +341,7 @@ export default function RequestOutbound() {
       </div>
 
       {/* === Table === */}
-      <div className="mt-4 mb-4">
+      <div className="rekap-table">
         <div className="bg-white table-container-rounded">
           <div className="table-responsive">
             <table className="table table-bordered table-sm text-center align-middle">
@@ -428,8 +400,9 @@ export default function RequestOutbound() {
                         <button
                           className="btn btn-sm p-1"
                           style={{ backgroundColor: "transparent", border: "none" }}
+                          onClick={() => openEdit(s)}
                         >
-                          <img src="/assets/DotsThreeVertical.svg" alt="More" style={{ width: "20px", height: "20px" }} />
+                          <img src="/assets/NotePencil.svg" alt="Edit" style={{ width: "20px", height: "20px" }} />
                         </button>
                       </div>
                     </td>
@@ -568,6 +541,43 @@ export default function RequestOutbound() {
                 }}
               />
               <button className="btn btn-danger send-btn" onClick={handleSend}>Send</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* === Edit Data Modal === */}
+      {showEditModal && (
+        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="message-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="message-header">
+              <div className="fw-semibold">Edit Data</div>
+              <button className="btn btn-sm" onClick={() => setShowEditModal(false)} aria-label="Close">
+                <span>&times;</span>
+              </button>
+            </div>
+            <div className="p-3">
+              <div className="mb-3">
+                <label className="form-label">Qty</label>
+                <input type="number" className="form-control" value={editForm.qty} onChange={(e) => setEditForm((f) => ({ ...f, qty: e.target.value }))} />
+              </div>
+              <div className="mb-3">
+                <label className="form-label">Alamat Tujuan</label>
+                <input type="text" className="form-control" value={editForm.alamat_tujuan} onChange={(e) => setEditForm((f) => ({ ...f, alamat_tujuan: e.target.value }))} />
+              </div>
+              <div className="mb-3">
+                <label className="form-label">Status</label>
+                <select className="form-select" value={editForm.status} onChange={(e) => setEditForm((f) => ({ ...f, status: e.target.value }))}>
+                  <option value="">Pilih status</option>
+                  <option value="On Going">On Going</option>
+                  <option value="Submitted">Submitted</option>
+                  <option value="Approved">Approved</option>
+                </select>
+              </div>
+              <div className="d-flex justify-content-end gap-2">
+                <button className="btn btn-outline-secondary" onClick={() => setShowEditModal(false)}>Cancel</button>
+                <button className="btn btn-danger" onClick={applyEdit}>Save</button>
+              </div>
             </div>
           </div>
         </div>

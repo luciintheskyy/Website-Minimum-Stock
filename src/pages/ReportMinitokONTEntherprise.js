@@ -242,6 +242,21 @@ export default function ReportMinitokONTEntherprise() {
 
   const startRange = (currentPage - 1) * entriesPerPage + 1;
   const endRange = Math.min(currentPage * entriesPerPage, totalData);
+  const batchOptions = Array.from(new Set((reports || []).map((r) => r.batch).filter(Boolean))).slice(0, 100);
+  const tregOptions = (() => {
+    const s = new Set();
+    (reports || []).forEach((r) => {
+      const txt = String(r.receiver_warehouse || r.warehouse || "");
+      const matches = txt.match(/TREG\s*\d+/gi);
+      if (matches) {
+        matches.forEach((m) => {
+          const norm = `TREG ${String(m).replace(/[^0-9]/g, "")}`;
+          if (norm.trim()) s.add(norm);
+        });
+      }
+    });
+    return Array.from(s).sort((a, b) => parseInt(a.replace(/\D/g, ""), 10) - parseInt(b.replace(/\D/g, ""), 10));
+  })();
 
   return (
     <>
@@ -282,18 +297,11 @@ export default function ReportMinitokONTEntherprise() {
             </button>
             {activeDropdown === "batch" && (
               <div className="position-absolute bg-white border rounded shadow-sm mt-1 w-100 z-3">
-                <button
-                  onClick={() => handleOptionSelect("Batch 1")}
-                  className="dropdown-item text-start px-3 py-2 small"
-                >
-                  Batch 1
-                </button>
-                <button
-                  onClick={() => handleOptionSelect("Batch 2")}
-                  className="dropdown-item text-start px-3 py-2 small"
-                >
-                  Batch 2
-                </button>
+                <button onClick={() => handleOptionSelect(null)} className="dropdown-item text-start px-3 py-2 small">Semua Batch</button>
+                {batchOptions.map((opt) => (
+                  <button key={opt} onClick={() => handleOptionSelect(opt)} className="dropdown-item text-start px-3 py-2 small">{opt}</button>
+                ))}
+                {batchOptions.length === 0 && (<div className="px-3 py-2 small text-muted">Tidak ada data batch</div>)}
               </div>
             )}
           </div>
@@ -320,23 +328,11 @@ export default function ReportMinitokONTEntherprise() {
             </button>
             {activeDropdown === "treg" && (
               <div className="position-absolute bg-white border rounded shadow-sm mt-1 w-100 z-3">
-                {[
-                  "TREG 1",
-                  "TREG 2",
-                  "TREG 3",
-                  "TREG 4",
-                  "TREG 5",
-                  "TREG 6",
-                  "TREG 7",
-                ].map((treg) => (
-                  <button
-                    key={treg}
-                    onClick={() => handleOptionSelect(treg)}
-                    className="dropdown-item text-start px-3 py-2 small"
-                  >
-                    {treg}
-                  </button>
+                <button onClick={() => handleOptionSelect(null)} className="dropdown-item text-start px-3 py-2 small">Semua</button>
+                {tregOptions.map((treg) => (
+                  <button key={treg} onClick={() => handleOptionSelect(treg)} className="dropdown-item text-start px-3 py-2 small">{treg}</button>
                 ))}
+                {tregOptions.length === 0 && (<div className="px-3 py-2 small text-muted">Tidak ada data TREG</div>)}
               </div>
             )}
           </div>

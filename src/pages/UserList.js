@@ -167,7 +167,7 @@ export default function UserList({ onAdd, onEdit }) {
     <div className="mt-4 mb-4">
       {/* Header: Search & Filters */}
       <div
-        className="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2"
+        className="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2 rekap-actions"
         ref={dropdownContainerRef}
       >
         <input
@@ -178,93 +178,15 @@ export default function UserList({ onAdd, onEdit }) {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-
         <button
-          className="btn btn-danger ms-2"
+          className="btn btn-danger ms-auto"
           onClick={() => onAdd && onAdd()}
           style={{ height: "38px" }}
         >
           Add User
         </button>
-
-        <div className="d-flex align-items-center gap-2 flex-nowrap ms-auto">
-          {/* Filters */}
-          <div className="position-relative me-2">
-            <button
-              onClick={() =>
-                setActiveDropdown((prev) => (prev === "filters" ? null : "filters"))
-              }
-              className="btn d-flex align-items-center justify-content-between px-3 text-dark"
-              style={{
-                backgroundColor: "#EEF2F6",
-                width: "120px",
-                height: "38px",
-                border: "none",
-              }}
-            >
-              <img
-                src="/assets/Sliders.svg"
-                alt="Sliders"
-                className="me-2"
-                style={{ width: "20px", height: "20px" }}
-              />
-              <span>Filters</span>
-              <img
-                src="/assets/CaretDownBold.svg"
-                alt="Caret"
-                className="ms-2"
-                style={{ width: "16px", height: "16px" }}
-              />
-            </button>
-            {activeDropdown === "filters" && (
-              <div className="position-absolute bg-white border rounded shadow-sm mt-1 w-100 z-3">
-                <button
-                  onClick={() => {
-                    setSelectedFilter({ type: "role", value: "Admin" });
-                    setActiveDropdown(null);
-                  }}
-                  className="dropdown-item text-start px-3 py-2 small"
-                >
-                  Role: Admin
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedFilter({ type: "role", value: "User" });
-                    setActiveDropdown(null);
-                  }}
-                  className="dropdown-item text-start px-3 py-2 small"
-                >
-                  Role: User
-                </button>
-                <div className="dropdown-divider" />
-                {asalOptions.slice(0, 6).map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => {
-                      setSelectedFilter({ type: "asal", value: opt });
-                      setActiveDropdown(null);
-                    }}
-                    className="dropdown-item text-start px-3 py-2 small"
-                  >
-                    Asal: {opt}
-                  </button>
-                ))}
-                <div className="dropdown-divider" />
-                <button
-                  onClick={() => {
-                    setSelectedFilter({ type: null, value: null });
-                    setActiveDropdown(null);
-                  }}
-                  className="dropdown-item text-start px-3 py-2 small"
-                >
-                  Reset filters
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
       </div>
-      <div className="bg-white table-container-rounded">
+      <div className="bg-white table-container-rounded rekap-table">
         <div className="table-responsive">
           <table className="table table-bordered table-sm text-center align-middle">
              <thead className="bg-abu">

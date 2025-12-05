@@ -10,6 +10,7 @@ export default function RekapMinitokONT() {
   const [lastUpdate, setLastUpdate] = useState(null);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const [activeButton, setActiveButton] = useState(null);
   const dropdownContainerRef = useRef(null);
   const uploadInputRef = useRef(null);
@@ -28,6 +29,8 @@ export default function RekapMinitokONT() {
   const [percentage, setPercentage] = useState(0);
   const [counts, setCounts] = useState({ red: 0, yellow: 0, green: 0 });
   const [reloadToken, setReloadToken] = useState(0);
+  const [taOptions, setTaOptions] = useState([]);
+  const [taLoading, setTaLoading] = useState(false);
 
   const exportXLSX = async () => {
     try {
@@ -864,6 +867,30 @@ export default function RekapMinitokONT() {
 
   const toggleDropdown = (type) => {
     setActiveDropdown((prev) => (prev === type ? null : type));
+    if (type === "taccan") {
+      const warehouse = selectedWitel || selectedTreg || (selectedTregs[0] ? `WH TR TREG ${selectedTregs[0].replace("TREG ", "")}` : "");
+      if (!warehouse) { setTaOptions([]); return; }
+      (async () => {
+        try {
+          setTaLoading(true);
+          const res = await axios.get(`${API_BASE_URL}/api/warehouses/ta-ccan`, { params: { warehouse } });
+          const data = res.data?.data || [];
+          setTaOptions(Array.isArray(data) ? data : []);
+        } catch (e) {
+          try {
+            const res2 = await axios.get(`${API_BASE_URL}/api/warehouses/${encodeURIComponent(warehouse)}/ta-ccan`);
+            const data2 = res2.data?.data || [];
+            setTaOptions(Array.isArray(data2) ? data2 : []);
+          } catch (_) {
+            setTaOptions([]);
+          } finally {
+            setTaLoading(false);
+          }
+        } finally {
+          setTaLoading(false);
+        }
+      })();
+    }
   };
 
   const handleTregCheckboxToggle = (tregOption) => {
@@ -944,7 +971,7 @@ export default function RekapMinitokONT() {
   return (
     <>
       {/* Cards */}
-      <div className="row g-3 py-3 mb-1">
+      <div className="row g-3 py-3 rekap-cards">
         {/* Percentage */}
         <div className="col-md-3">
           <div className="border rounded bg-white px-3 py-3">
@@ -1005,7 +1032,7 @@ export default function RekapMinitokONT() {
       </div>
 
       {/* Last Update, Search Bar, Action Buttons */}
-      <div className="d-flex justify-content-between align-items-center mt-1 flex-wrap gap-2">
+      <div className="d-flex justify-content-between align-items-center mt-1 flex-wrap gap-2 rekap-actions">
         <div
           className="rounded px-2 py-2 text-dark small"
           style={{ backgroundColor: "#EEF2F6" }}
@@ -1037,8 +1064,8 @@ export default function RekapMinitokONT() {
               setIsSearchFocused(false); // Reset border
               console.log("Search blurred"); // Test
             }}
-            // Opsional: Tambah onChange jika ada logic search (misal filter tabel)
-            // onChange={(e) => handleSearch(e.target.value)}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
 
           <div className="position-relative me-2">
@@ -1047,11 +1074,10 @@ export default function RekapMinitokONT() {
                 e.stopPropagation();
                 toggleDropdown("treg");
               }}
-              className="btn d-flex align-items-center justify-content-between px-2 text-dark custom-btn"
+              className="btn d-flex align-items-center justify-content-between px-2 text-dark custom-btn btn-standard"
               style={{
                 backgroundColor: "#EEF2F6",
                 width: "80px",
-                height: "38px",
                 outline: "none",
                 transition: "boder-color, box-shadow 0.15s ease-in-out",
               }}
@@ -1143,11 +1169,10 @@ export default function RekapMinitokONT() {
                 e.stopPropagation();
                 toggleDropdown("taccan");
               }}
-              className="btn d-flex align-items-center justify-content-between px-2 text-dark custom-btn"
+              className="btn d-flex align-items-center justify-content-between px-2 text-dark custom-btn btn-standard"
               style={{
                 backgroundColor: "#EEF2F6",
                 width: "106px",
-                height: "38px",
                 outline: "none",
                 transition:
                   "border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out",
@@ -1172,32 +1197,24 @@ export default function RekapMinitokONT() {
             </button>
             {activeDropdown === "taccan" && (
               <div className="position-absolute bg-white border rounded shadow-sm mt-1 w-100 z-3">
-                {["CCAN A", "CCAN B", "CCAN C"].map((option, i) => (
-                  <button
-                    key={i}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOptionSelect(option, undefined, e); // Console.log, tidak ubah tabel
-                    }}
-                    className="dropdown-item text-start px-2 py-2 small custom-hover"
-                    style={{
-                      cursor: "pointer",
-                      transition:
-                        "color 0.15s ease-in-out, background-color 0.15s ease-in-out",
-                      width: "100%",
-                      textAlign: "left",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = "#CB3A31"; // Hover teks merah
-                      e.currentTarget.style.backgroundColor = "#f8f9fa";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = ""; // Reset
-                      e.currentTarget.style.backgroundColor = "";
-                    }}
-                  >
-                    {option}
-                  </button>
+                {taLoading ? (
+                  <div className="px-2 py-2 small text-muted">Loading...</div>
+                ) : (taOptions.length > 0 ? (
+                  taOptions.map((opt, i) => (
+                    <button
+                      key={i}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOptionSelect(opt.label || opt.value || String(opt), undefined, e);
+                      }}
+                      className="dropdown-item text-start px-2 py-2 small custom-hover"
+                      style={{ cursor: "pointer", width: "100%", textAlign: "left" }}
+                    >
+                      {opt.label || opt.value || String(opt)}
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-2 py-2 small text-muted">No options</div>
                 ))}
               </div>
             )}
@@ -1209,11 +1226,10 @@ export default function RekapMinitokONT() {
                 e.stopPropagation();
                 toggleDropdown("export");
               }}
-              className="btn d-flex align-items-center justify-content-between px-2 text-dark custom-btn"
+              className="btn d-flex align-items-center justify-content-between px-2 text-dark custom-btn btn-standard"
               style={{
                 backgroundColor: "#EEF2F6",
                 width: "115px",
-                height: "38px",
                 outline: "none",
                 transition:
                   "border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out",
@@ -1234,14 +1250,9 @@ export default function RekapMinitokONT() {
                   alt="Export"
                   style={{ width: "20px", height: "20px" }}
                 />
-                Export
+                Export Data
               </div>
-              <img
-                src="/assets/CaretDownBold.svg"
-                alt="Caret"
-                className="ms-2"
-                style={{ width: "16px", height: "16px" }}
-              />
+              {/* caret removed as per requirement */}
             </button>
             {activeDropdown === "export" && (
               <div className="position-absolute bg-white border rounded shadow-sm mt-1 w-100 z-3">
@@ -1282,11 +1293,10 @@ export default function RekapMinitokONT() {
                 e.stopPropagation();
                 toggleDropdown("upload");
               }}
-              className="btn d-flex align-items-center justify-content-between px-2 text-dark custom-btn"
+              className="btn d-flex align-items-center justify-content-between px-2 text-dark custom-btn btn-standard"
               style={{
                 backgroundColor: "#EEF2F6",
                 width: "160px",
-                height: "38px",
                 outline: "none",
                 transition:
                   "border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out",
@@ -1309,12 +1319,7 @@ export default function RekapMinitokONT() {
                 />
                 Upload Data
               </div>
-              <img
-                src="/assets/CaretDownBold.svg"
-                alt="Caret"
-                className="ms-2"
-                style={{ width: "16px", height: "16px" }}
-              />
+              {/* caret remains for Upload */}
             </button>
             {activeDropdown === "upload" && (
               <div
@@ -1359,7 +1364,7 @@ export default function RekapMinitokONT() {
       </div>
 
       {/* === Table === */}
-      <div className="mt-4 mb-4">
+      <div className="rekap-table">
         <div className="bg-white table-container-rounded">
           <div className="table-responsive">
             <table className="table table-bordered table-sm text-center table-custom">
@@ -1411,8 +1416,48 @@ export default function RekapMinitokONT() {
               </thead>
 
               <tbody>
-                {currentTableRows.length > 0 ? (
-                  currentTableRows.map((row, i) => (
+                {(currentTableRows.filter((row) => {
+                  const q = searchTerm.trim().toLowerCase();
+                  if (!q) return true;
+                  return [
+                    row.warehouse,
+                    row.totalRetailSB,
+                    row.totalRetailDB,
+                    row.totalPremiumSCMT,
+                    row.totalONTSCMT,
+                    row.totalPremiumGAP,
+                    row.totalONTGAP,
+                    row.totalRetailKebutuhan,
+                    row.totalPremiumKebutuhan,
+                    row.totalONTKebutuhan,
+                    row.totalRetailMinStock,
+                    row.totalPremiumMinStock,
+                    row.totalONTMinStock,
+                    row.totalRetailDelivery,
+                    row.totalPremiumDelivery,
+                  ].some((v) => String(v || "").toLowerCase().includes(q));
+                })).length > 0 ? (
+                  currentTableRows.filter((row) => {
+                    const q = searchTerm.trim().toLowerCase();
+                    if (!q) return true;
+                    return [
+                      row.warehouse,
+                      row.totalRetailSB,
+                      row.totalRetailDB,
+                      row.totalPremiumSCMT,
+                      row.totalONTSCMT,
+                      row.totalPremiumGAP,
+                      row.totalONTGAP,
+                      row.totalRetailKebutuhan,
+                      row.totalPremiumKebutuhan,
+                      row.totalONTKebutuhan,
+                      row.totalRetailMinStock,
+                      row.totalPremiumMinStock,
+                      row.totalONTMinStock,
+                      row.totalRetailDelivery,
+                      row.totalPremiumDelivery,
+                    ].some((v) => String(v || "").toLowerCase().includes(q));
+                  }).map((row, i) => (
                     <tr
                       key={row.warehouse || i} // Key unik berdasarkan warehouse (hindari React warning)
                       onClick={() => {

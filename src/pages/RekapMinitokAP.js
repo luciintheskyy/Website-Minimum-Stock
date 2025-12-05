@@ -18,6 +18,10 @@ export default function RekapMinitokAP() {
   const [rows, setRows] = useState([]);
   const uploadInputRef = useRef(null);
   const [reloadToken, setReloadToken] = useState(0);
+  const [taOptions, setTaOptions] = useState([]);
+  const [taLoading, setTaLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedTreg, setSelectedTreg] = useState(null);
 
   // Default parameter global sesuai dokumentasi
   const defaultMinStock = 215; // B
@@ -63,6 +67,52 @@ export default function RekapMinitokAP() {
 
   const toggleDropdown = (type) => {
     setActiveDropdown((prev) => (prev === type ? null : type));
+    if (type === "taccan") {
+      const candidatesSet = new Set();
+      if (selectedTreg) {
+        const n = String(selectedTreg).replace(/\D/g, "");
+        if (n) candidatesSet.add(`WH TR TREG ${n}`);
+      }
+      (rows || []).forEach((r) => {
+        const w = String(r.warehouse || "");
+        const m = w.match(/WH TR TREG \d+/i);
+        if (m) candidatesSet.add(m[0]);
+      });
+      let candidates = Array.from(candidatesSet);
+      if (candidates.length === 0) {
+        candidates = [1,2,3,4,5,6,7].map((n) => `WH TR TREG ${n}`);
+      }
+      (async () => {
+        setTaLoading(true);
+        try {
+          const lists = await Promise.all(
+            candidates.map(async (wh) => {
+              try {
+                const res = await axios.get(`${API_BASE_URL}/api/warehouses/ta-ccan`, { params: { warehouse: wh } });
+                return res.data?.data || [];
+              } catch (e) {
+                try {
+                  const res2 = await axios.get(`${API_BASE_URL}/api/warehouses/${encodeURIComponent(wh)}/ta-ccan`);
+                  return res2.data?.data || [];
+                } catch (_) {
+                  return [];
+                }
+              }
+            })
+          );
+          const flat = ([]).concat(...lists);
+          const seen = new Set();
+          const uniq = [];
+          flat.forEach((item) => {
+            const key = item?.label || item?.value || String(item);
+            if (!seen.has(key)) { seen.add(key); uniq.push(item); }
+          });
+          setTaOptions(uniq);
+        } finally {
+          setTaLoading(false);
+        }
+      })();
+    }
   };
 
   const handleOptionSelect = (option) => {
@@ -187,7 +237,7 @@ export default function RekapMinitokAP() {
   return (
     <>
       {/* === Cards === */}
-      <div className="row g-3 py-3 mb-1">
+      <div className="row g-3 py-3 rekap-cards">
         <div className="col-md-3">
           <div className="border rounded bg-white px-3 py-3">
             <div className="text-muted medium mb-1">Percentage</div>
@@ -243,7 +293,7 @@ export default function RekapMinitokAP() {
       </div>
 
       {/* === Last Update & Actions === */}
-      <div className="d-flex justify-content-between align-items-center mt-1 flex-wrap gap-2">
+      <div className="d-flex justify-content-between align-items-center mt-1 flex-wrap gap-2 rekap-actions">
         <div
           className="rounded px-3 py-2 text-dark small"
           style={{ backgroundColor: "#EEF2F6" }}
@@ -261,18 +311,18 @@ export default function RekapMinitokAP() {
             placeholder="Search..."
             className="form-control"
             style={{ width: "300px" }}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
 
           {/* TREG */}
           <div className="position-relative me-2">
             <button
               onClick={() => toggleDropdown("treg")}
-              className="btn d-flex align-items-center justify-content-between px-3 text-dark"
+              className="btn d-flex align-items-center justify-content-between px-3 text-dark btn-standard"
               style={{
                 backgroundColor: "#EEF2F6",
                 width: "90px",
-                height: "38px",
-                border: "none",
               }}
             >
               <span>TREG</span>
@@ -285,14 +335,16 @@ export default function RekapMinitokAP() {
             </button>
             {activeDropdown === "treg" && (
               <div className="position-absolute bg-white border rounded shadow-sm mt-1 w-100 z-3">
-                {[1, 2, 3, 4, 5, 6, 7].map((num) => (
-                  <button
-                    key={num}
-                    onClick={() => handleOptionSelect(`TREG ${num}`)}
-                    className="dropdown-item text-start px-3 py-2 small"
-                  >
-                    TREG {num}
-                  </button>
+                <button onClick={() => { setSelectedTreg(null); setActiveDropdown(null); }} className="dropdown-item text-start px-3 py-2 small">Semua</button>
+                {(() => {
+                  const s = new Set();
+                  (rows || []).forEach((r) => {
+                    const m = String(r.warehouse || "").match(/TREG\s*\d+/gi);
+                    if (m) m.forEach((mm) => s.add(`TREG ${String(mm).replace(/[^0-9]/g, "")}`));
+                  });
+                  return Array.from(s).sort((a, b) => parseInt(a.replace(/\D/g, ""), 10) - parseInt(b.replace(/\D/g, ""), 10));
+                })().map((opt) => (
+                  <button key={opt} onClick={() => { setSelectedTreg(opt); setActiveDropdown(null); }} className="dropdown-item text-start px-3 py-2 small">{opt}</button>
                 ))}
               </div>
             )}
@@ -302,12 +354,10 @@ export default function RekapMinitokAP() {
           <div className="position-relative me-2">
             <button
               onClick={() => toggleDropdown("taccan")}
-              className="btn d-flex align-items-center justify-content-between px-3 text-dark"
+              className="btn d-flex align-items-center justify-content-between px-3 text-dark btn-standard"
               style={{
                 backgroundColor: "#EEF2F6",
                 width: "120px",
-                height: "38px",
-                border: "none",
               }}
             >
               <span>TA CCAN</span>
@@ -320,14 +370,20 @@ export default function RekapMinitokAP() {
             </button>
             {activeDropdown === "taccan" && (
               <div className="position-absolute bg-white border rounded shadow-sm mt-1 w-100 z-3">
-                {["CCAN A", "CCAN B", "CCAN C"].map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => handleOptionSelect(opt)}
-                    className="dropdown-item text-start px-3 py-2 small"
-                  >
-                    {opt}
-                  </button>
+                {taLoading ? (
+                  <div className="px-3 py-2 small text-muted">Loading...</div>
+                ) : (taOptions.length > 0 ? (
+                  taOptions.map((opt, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleOptionSelect(opt.label || opt.value || String(opt))}
+                      className="dropdown-item text-start px-3 py-2 small"
+                    >
+                      {opt.label || opt.value || String(opt)}
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-3 py-2 small text-muted">No options</div>
                 ))}
               </div>
             )}
@@ -337,12 +393,10 @@ export default function RekapMinitokAP() {
           <div className="position-relative">
             <button
               onClick={() => toggleDropdown("export")}
-              className="btn d-flex align-items-center justify-content-between px-3 text-dark"
+              className="btn d-flex align-items-center justify-content-between px-3 text-dark btn-standard"
               style={{
                 backgroundColor: "#EEF2F6",
                 width: "130px",
-                height: "38px",
-                border: "none",
               }}
             >
               <div className="d-flex align-items-center gap-2">
@@ -351,14 +405,8 @@ export default function RekapMinitokAP() {
                   alt="Export"
                   style={{ width: "20px", height: "20px" }}
                 />
-                Export
+                Export Data
               </div>
-              <img
-                src="/assets/CaretDownBold.svg"
-                alt="Caret"
-                className="ms-2"
-                style={{ width: "16px", height: "16px" }}
-              />
             </button>
           {activeDropdown === "export" && (
             <div className="position-absolute bg-white border rounded shadow-sm mt-1 w-100 z-3">
@@ -379,12 +427,10 @@ export default function RekapMinitokAP() {
           <div className="position-relative">
             <button
               onClick={() => toggleDropdown("upload")}
-              className="btn d-flex align-items-center justify-content-between px-3 text-dark"
+              className="btn d-flex align-items-center justify-content-between px-3 text-dark btn-standard"
               style={{
                 backgroundColor: "#EEF2F6",
                 width: "173px",
-                height: "38px",
-                border: "none",
               }}
             >
               <div className="d-flex align-items-center gap-2">
@@ -429,7 +475,7 @@ export default function RekapMinitokAP() {
       <input ref={uploadInputRef} type="file" accept=".xlsx" style={{ display: "none" }} onChange={handleFileSelected} />
 
       {/* === Table === */}
-      <div className="mt-4 mb-4">
+      <div className="rekap-table">
         <div className="bg-white table-container-rounded">
           <div className="table-responsive">
             <table className="table table-bordered table-sm text-center table-custom">
@@ -481,7 +527,22 @@ export default function RekapMinitokAP() {
                     <td colSpan="6" className="text-center">Tidak ada data</td>
                   </tr>
                 )}
-                {!loading && !error && rows.map((r, idx) => (
+                {!loading && !error && (() => {
+                  const q = searchTerm.trim().toLowerCase();
+                  const bySearch = (x) => [
+                    x.warehouse,
+                    x.total_stock_a,
+                    x.gap_stock,
+                    x.kebutuhan,
+                    x.min_stock_requirement_b,
+                    x.on_delivery_c,
+                  ].some((v) => String(v || "").toLowerCase().includes(q));
+                  const byTreg = (x) => {
+                    if (!selectedTreg) return true;
+                    return String(x.warehouse || "").toLowerCase().includes(String(selectedTreg).toLowerCase());
+                  };
+                  return rows.filter((x) => bySearch(x) && byTreg(x));
+                })().map((r, idx) => (
                   <tr key={r.warehouse || idx}>
                     <td className="bg-abu">{r.warehouse}</td>
                     <td>{r.total_stock_a}</td>
@@ -491,14 +552,49 @@ export default function RekapMinitokAP() {
                     <td>{r.on_delivery_c}</td>
                   </tr>
                 ))}
-                {!loading && !error && rows.length > 0 && (
+                {!loading && !error && (() => {
+                  const q = searchTerm.trim().toLowerCase();
+                  const bySearch = (x) => [
+                    x.warehouse,
+                    x.total_stock_a,
+                    x.gap_stock,
+                    x.kebutuhan,
+                    x.min_stock_requirement_b,
+                    x.on_delivery_c,
+                  ].some((v) => String(v || "").toLowerCase().includes(q));
+                  const byTreg = (x) => {
+                    if (!selectedTreg) return true;
+                    return String(x.warehouse || "").toLowerCase().includes(String(selectedTreg).toLowerCase());
+                  };
+                  return rows.filter((x) => bySearch(x) && byTreg(x)).length > 0;
+                })() && (
                   <tr className="fw-bold">
                     <td className="bg-abu">Total</td>
-                    <td className="bg-abu">{rows.reduce((a, b) => a + (Number(b.total_stock_a)||0), 0)}</td>
-                    <td className="bg-abu">{rows.reduce((a, b) => a + (Number(b.gap_stock)||0), 0)}</td>
-                    <td className="bg-abu">{rows.reduce((a, b) => a + (Number(b.kebutuhan)||0), 0)}</td>
-                    <td className="bg-abu">{rows.reduce((a, b) => a + (Number(b.min_stock_requirement_b)||0), 0)}</td>
-                    <td className="bg-abu">{rows.reduce((a, b) => a + (Number(b.on_delivery_c)||0), 0)}</td>
+                    <td className="bg-abu">{rows.filter((x) => {
+                      const q = searchTerm.trim().toLowerCase();
+                      const bySearch = [x.warehouse, x.total_stock_a, x.gap_stock, x.kebutuhan, x.min_stock_requirement_b, x.on_delivery_c].some((v) => String(v || "").toLowerCase().includes(q));
+                      const byTreg = !selectedTreg || String(x.warehouse || "").toLowerCase().includes(String(selectedTreg).toLowerCase());
+                      return bySearch && byTreg;}).reduce((a, b) => a + (Number(b.total_stock_a)||0), 0)}</td>
+                    <td className="bg-abu">{rows.filter((x) => {
+                      const q = searchTerm.trim().toLowerCase();
+                      const bySearch = [x.warehouse, x.total_stock_a, x.gap_stock, x.kebutuhan, x.min_stock_requirement_b, x.on_delivery_c].some((v) => String(v || "").toLowerCase().includes(q));
+                      const byTreg = !selectedTreg || String(x.warehouse || "").toLowerCase().includes(String(selectedTreg).toLowerCase());
+                      return bySearch && byTreg;}).reduce((a, b) => a + (Number(b.gap_stock)||0), 0)}</td>
+                    <td className="bg-abu">{rows.filter((x) => {
+                      const q = searchTerm.trim().toLowerCase();
+                      const bySearch = [x.warehouse, x.total_stock_a, x.gap_stock, x.kebutuhan, x.min_stock_requirement_b, x.on_delivery_c].some((v) => String(v || "").toLowerCase().includes(q));
+                      const byTreg = !selectedTreg || String(x.warehouse || "").toLowerCase().includes(String(selectedTreg).toLowerCase());
+                      return bySearch && byTreg;}).reduce((a, b) => a + (Number(b.kebutuhan)||0), 0)}</td>
+                    <td className="bg-abu">{rows.filter((x) => {
+                      const q = searchTerm.trim().toLowerCase();
+                      const bySearch = [x.warehouse, x.total_stock_a, x.gap_stock, x.kebutuhan, x.min_stock_requirement_b, x.on_delivery_c].some((v) => String(v || "").toLowerCase().includes(q));
+                      const byTreg = !selectedTreg || String(x.warehouse || "").toLowerCase().includes(String(selectedTreg).toLowerCase());
+                      return bySearch && byTreg;}).reduce((a, b) => a + (Number(b.min_stock_requirement_b)||0), 0)}</td>
+                    <td className="bg-abu">{rows.filter((x) => {
+                      const q = searchTerm.trim().toLowerCase();
+                      const bySearch = [x.warehouse, x.total_stock_a, x.gap_stock, x.kebutuhan, x.min_stock_requirement_b, x.on_delivery_c].some((v) => String(v || "").toLowerCase().includes(q));
+                      const byTreg = !selectedTreg || String(x.warehouse || "").toLowerCase().includes(String(selectedTreg).toLowerCase());
+                      return bySearch && byTreg;}).reduce((a, b) => a + (Number(b.on_delivery_c)||0), 0)}</td>
                   </tr>
                 )}
               </tbody>

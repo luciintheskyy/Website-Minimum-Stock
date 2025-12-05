@@ -54,7 +54,7 @@ export default function Notifications() {
   const chatMessagesRef = useRef([]);
   const updatesTimerRef = useRef(null);
   // Notifications tabs
-  const [notifTab, setNotifTab] = useState("messages"); // general | messages
+  const [notifTab, setNotifTab] = useState("general");
   const [generalLogs, setGeneralLogs] = useState([]);
   const [generalLoading, setGeneralLoading] = useState(false);
 
@@ -116,6 +116,7 @@ export default function Notifications() {
 
   const handleMenuClick = (menu) => {
     setActiveMenu(menu);
+    setProfileMenuOpen(false);
     if (menu === "Minitok ONT") navigate("/minitok-ont/rekap");
     if (menu === "Minitok AP") navigate("/minitok-ap/rekap");
     if (menu === "Minitok Node B") navigate("/minitok-nodeb/rekap");

@@ -347,7 +347,6 @@ export default function ReportMinitokONT() {
         />
 
         <div className="d-flex align-items-center gap-2 flex-nowrap ms-auto order-3">
-          {/* Dropdown Batch (sama seperti kode Anda, simple – sekarang pakai handleOptionSelect) */}
           <div className="position-relative me-2 batch-dropdown">
             <button
               onClick={(e) => {
@@ -385,53 +384,28 @@ export default function ReportMinitokONT() {
             {activeDropdown === "batch" && (
               <div
                 className="position-absolute bg-white border rounded shadow-sm mt-1 w-100 z-3"
-                style={{
-                  minWidth: "172px", // TAMBAHAN: Lebar minimal 250px (cukup untuk opsi panjang)
-                  width: "auto", // Auto-adjust jika konten lebih lebar
-                  left: 0, // Align kanan agar tidak overlap button kiri
-                }}
+                style={{ minWidth: "172px", width: "auto", left: 0 }}
               >
-                {[
-                  "3400 RETAIL HUAWEI",
-                  "4817 RETAIL HUAWEI",
-                  "NODE B ZTE SEPTEMBER",
-                  "NODE B 550 FH",
-                  "RETAIL 12786",
-                  "RETAIL 12786, TUF",
-                  "RETAIL ST KE CPP",
-                  "SENDIRI",
-                  "ST KE CPP",
-                ].map((option, i) => (
+                <button
+                  className="dropdown-item text-start px-2 py-2 small"
+                  onClick={(e) => { e.stopPropagation(); handleOptionSelect(null); }}
+                >
+                  Semua Batch
+                </button>
+                {Array.from(new Set((reports || []).map((r) => r.batch).filter(Boolean))).map((option) => (
                   <button
-                    key={i}
+                    key={option}
                     className="dropdown-item text-start px-2 py-2 small custom-hover"
-                    style={{
-                      cursor: "pointer",
-                      transition:
-                        "color 0.15s ease-in-out, background-color 0.15s ease-in-out",
-                      width: "100%",
-                      textAlign: "left",
-                      whiteSpace: "nowrap", // TAMBAHAN: No wrap
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation(); // FIX: Cegah bubble ke document
-                      handleOptionSelect(option); // FIX: Syntax benar (no koma kosong, no e/type)
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = "#CB3A31"; // Hover teks merah
-                      e.currentTarget.style.backgroundColor = "#f8f9fa";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = ""; // Reset
-                      e.currentTarget.style.backgroundColor = "";
-                    }}
-                    title={option} // TAMBAHAN: Tooltip full text
+                    style={{ cursor: "pointer", width: "100%", textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                    onClick={(e) => { e.stopPropagation(); handleOptionSelect(option); }}
+                    title={option}
                   >
                     {option}
                   </button>
                 ))}
+                {Array.from(new Set((reports || []).map((r) => r.batch).filter(Boolean))).length === 0 && (
+                  <div className="px-2 py-2 small text-muted">Tidak ada data batch</div>
+                )}
               </div>
             )}
           </div>

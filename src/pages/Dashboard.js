@@ -90,6 +90,7 @@ export default function Dashboard() {
   // Menu klik
   const handleMenuClick = (menu) => {
     setActiveMenu(menu);
+    setProfileMenuOpen(false);
     if (menu === "Minitok ONT") navigate("/minitok-ont/rekap");
     if (menu === "Minitok AP") navigate("/minitok-ap/rekap");
     if (menu === "Minitok Node B") navigate("/minitok-nodeb/rekap");
@@ -246,7 +247,7 @@ export default function Dashboard() {
               className="btn btn-light p-2 d-flex justify-content-center align-items-center"
               style={{ backgroundColor: "white", borderColor: "white" }}
               onClick={() => {
-                // Redirect ke halaman Notifications (Messages)
+                setProfileMenuOpen(false);
                 navigate("/notifications");
               }}
             >
