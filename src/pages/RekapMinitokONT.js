@@ -14,7 +14,7 @@ export default function RekapMinitokONT() {
   const [activeButton, setActiveButton] = useState(null);
   const dropdownContainerRef = useRef(null);
   const uploadInputRef = useRef(null);
-  const [selectedLevel, setSelectedLevel] = useState("treg"); // treg | witel | ta
+  const [selectedLevel, setSelectedLevel] = useState("treg");
   const [selectedWitel, setSelectedWitel] = useState(null);
   const [selectedTreg, setSelectedTreg] = useState(null);
   const [selectedTregs, setSelectedTregs] = useState([
@@ -25,7 +25,8 @@ export default function RekapMinitokONT() {
     "TREG 5",
   ]);
   const [tableData, setTableData] = useState([]);
-  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8000";
+  const API_BASE_URL =
+    process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8000";
   const [percentage, setPercentage] = useState(0);
   const [counts, setCounts] = useState({ red: 0, yellow: 0, green: 0 });
   const [reloadToken, setReloadToken] = useState(0);
@@ -60,7 +61,9 @@ export default function RekapMinitokONT() {
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       XLSX.utils.book_append_sheet(wb, ws, `Report_ONT`);
       const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-      const blob = new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const blob = new Blob([wbout], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -110,7 +113,14 @@ export default function RekapMinitokONT() {
         tanggal_sampai: toDateStr(row.tanggal_sampai),
         batch: toStr(row.batch),
       }));
-      const resConfirm = await Swal.fire({ title: "Konfirmasi import", text: `Import ${items.length} item?`, icon: "question", showCancelButton: true, confirmButtonText: "Ya, import", cancelButtonText: "Batal" });
+      const resConfirm = await Swal.fire({
+        title: "Konfirmasi import",
+        text: `Import ${items.length} item?`,
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Ya, import",
+        cancelButtonText: "Batal",
+      });
       if (!resConfirm.isConfirmed) return;
       await axios.post(`${API_BASE_URL}/api/reports`, { jenis: "ONT", items });
       toast.success(`Import berhasil: ${items.length} item`);
@@ -816,7 +826,14 @@ export default function RekapMinitokONT() {
         const lu = data.last_update || null;
         if (lu) {
           const date = new Date(lu);
-          const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}`;
+          const formattedDate = `${date.getFullYear()}-${String(
+            date.getMonth() + 1
+          ).padStart(2, "0")}-${String(date.getDate()).padStart(
+            2,
+            "0"
+          )} ${String(date.getHours()).padStart(2, "0")}:${String(
+            date.getMinutes()
+          ).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}`;
           setLastUpdate(formattedDate);
         }
         setPercentage(Number(data.percentage || 0));
@@ -841,8 +858,7 @@ export default function RekapMinitokONT() {
     ].filter((wh, index, self) => self.indexOf(wh) === index);
 
     const generatedData = allWarehouses.map((wh, i) => {
-      // Nilai statis fixed berdasarkan index (i) - berbeda per warehouse, tapi tetap selamanya
-      const baseValue = i * 10; // Misal: Warehouse 0 = base 0, Warehouse 1 = base 10, dst.
+      const baseValue = i * 10;
       return {
         warehouse: wh,
         totalRetailSB: 50 + baseValue,
@@ -868,17 +884,32 @@ export default function RekapMinitokONT() {
   const toggleDropdown = (type) => {
     setActiveDropdown((prev) => (prev === type ? null : type));
     if (type === "taccan") {
-      const warehouse = selectedWitel || selectedTreg || (selectedTregs[0] ? `WH TR TREG ${selectedTregs[0].replace("TREG ", "")}` : "");
-      if (!warehouse) { setTaOptions([]); return; }
+      const warehouse =
+        selectedWitel ||
+        selectedTreg ||
+        (selectedTregs[0]
+          ? `WH TR TREG ${selectedTregs[0].replace("TREG ", "")}`
+          : "");
+      if (!warehouse) {
+        setTaOptions([]);
+        return;
+      }
       (async () => {
         try {
           setTaLoading(true);
-          const res = await axios.get(`${API_BASE_URL}/api/warehouses/ta-ccan`, { params: { warehouse } });
+          const res = await axios.get(
+            `${API_BASE_URL}/api/warehouses/ta-ccan`,
+            { params: { warehouse } }
+          );
           const data = res.data?.data || [];
           setTaOptions(Array.isArray(data) ? data : []);
         } catch (e) {
           try {
-            const res2 = await axios.get(`${API_BASE_URL}/api/warehouses/${encodeURIComponent(warehouse)}/ta-ccan`);
+            const res2 = await axios.get(
+              `${API_BASE_URL}/api/warehouses/${encodeURIComponent(
+                warehouse
+              )}/ta-ccan`
+            );
             const data2 = res2.data?.data || [];
             setTaOptions(Array.isArray(data2) ? data2 : []);
           } catch (_) {
@@ -922,9 +953,15 @@ export default function RekapMinitokONT() {
       setSelectedLevel("treg");
       setSelectedWitel(null);
     }
-    if (type === "export" || (option && option.toLowerCase().includes("export"))) {
+    if (
+      type === "export" ||
+      (option && option.toLowerCase().includes("export"))
+    ) {
       exportXLSX();
-    } else if (type === "upload" || (option && option.toLowerCase().includes("upload"))) {
+    } else if (
+      type === "upload" ||
+      (option && option.toLowerCase().includes("upload"))
+    ) {
       openUpload();
     }
     // Untuk TA CCAN/Export/Upload (tanpa type): Hanya console.log, tidak ubah warehouses/tabel
@@ -983,8 +1020,14 @@ export default function RekapMinitokONT() {
                 alt="Chart"
                 style={{ width: "32px", height: "32px" }}
               />
-  </div>
-  <input ref={uploadInputRef} type="file" accept=".xlsx" style={{ display: "none" }} onChange={handleFileSelected} />
+            </div>
+            <input
+              ref={uploadInputRef}
+              type="file"
+              accept=".xlsx"
+              style={{ display: "none" }}
+              onChange={handleFileSelected}
+            />
           </div>
         </div>
         {/* Red Status */}
@@ -1104,9 +1147,9 @@ export default function RekapMinitokONT() {
               <div
                 className="position-absolute bg-white border rounded shadow-sm mt-1 w-100 z-3"
                 style={{
-                  minWidth: "84px", // TAMBAHAN: Lebar minimal 250px (cukup untuk opsi panjang)
-                  width: "auto", // Auto-adjust jika konten lebih lebar
-                  left: 0, // Align kanan agar tidak overlap button kiri
+                  minWidth: "84px",
+                  width: "auto",
+                  left: 0,
                 }}
               >
                 {["1", "2", "3", "4", "5"].map((num) => {
@@ -1122,12 +1165,10 @@ export default function RekapMinitokONT() {
                           "color 0.15s ease-in-out, background-color 0.15s ease-in-out",
                       }}
                       onMouseEnter={(e) => {
-                        // Hover effect: Teks/label merah #CB3A31, background abu muda
                         e.currentTarget.style.color = "#CB3A31";
                         e.currentTarget.style.backgroundColor = "#f8f9fa";
                       }}
                       onMouseLeave={(e) => {
-                        // Reset hover: Kembali ke default
                         e.currentTarget.style.color = "";
                         e.currentTarget.style.backgroundColor = "";
                       }}
@@ -1199,23 +1240,31 @@ export default function RekapMinitokONT() {
               <div className="position-absolute bg-white border rounded shadow-sm mt-1 w-100 z-3">
                 {taLoading ? (
                   <div className="px-2 py-2 small text-muted">Loading...</div>
-                ) : (taOptions.length > 0 ? (
+                ) : taOptions.length > 0 ? (
                   taOptions.map((opt, i) => (
                     <button
                       key={i}
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleOptionSelect(opt.label || opt.value || String(opt), undefined, e);
+                        handleOptionSelect(
+                          opt.label || opt.value || String(opt),
+                          undefined,
+                          e
+                        );
                       }}
                       className="dropdown-item text-start px-2 py-2 small custom-hover"
-                      style={{ cursor: "pointer", width: "100%", textAlign: "left" }}
+                      style={{
+                        cursor: "pointer",
+                        width: "100%",
+                        textAlign: "left",
+                      }}
                     >
                       {opt.label || opt.value || String(opt)}
                     </button>
                   ))
                 ) : (
                   <div className="px-2 py-2 small text-muted">No options</div>
-                ))}
+                )}
               </div>
             )}
           </div>
@@ -1229,7 +1278,7 @@ export default function RekapMinitokONT() {
               className="btn d-flex align-items-center justify-content-between px-2 text-dark custom-btn btn-standard"
               style={{
                 backgroundColor: "#EEF2F6",
-                width: "115px",
+                width: "155px",
                 outline: "none",
                 transition:
                   "border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out",
@@ -1252,6 +1301,12 @@ export default function RekapMinitokONT() {
                 />
                 Export Data
               </div>
+              <img
+                src="/assets/CaretDownBold.svg"
+                alt="Caret"
+                className="ms-2"
+                style={{ width: "16px", height: "16px" }}
+              />
               {/* caret removed as per requirement */}
             </button>
             {activeDropdown === "export" && (
@@ -1319,6 +1374,12 @@ export default function RekapMinitokONT() {
                 />
                 Upload Data
               </div>
+              <img
+                src="/assets/CaretDownBold.svg"
+                alt="Caret"
+                className="ms-2"
+                style={{ width: "16px", height: "16px" }}
+              />
               {/* caret remains for Upload */}
             </button>
             {activeDropdown === "upload" && (
@@ -1376,7 +1437,9 @@ export default function RekapMinitokONT() {
                   <th colSpan="4">
                     Stock SCMT
                     <br />
-                    <small style={{ backgroundColor: "transparent" }}>(A)</small>
+                    <small style={{ backgroundColor: "transparent" }}>
+                      (A)
+                    </small>
                   </th>
                   <th colSpan="2">
                     GAP Stock
@@ -1389,12 +1452,16 @@ export default function RekapMinitokONT() {
                   <th colSpan="3">
                     Minimum Stock Requirement Retail
                     <br />
-                    <small style={{ backgroundColor: "transparent" }}>(B)</small>
+                    <small style={{ backgroundColor: "transparent" }}>
+                      (B)
+                    </small>
                   </th>
                   <th colSpan="2">
                     On Delivery
                     <br />
-                    <small style={{ backgroundColor: "transparent" }}>(C)</small>
+                    <small style={{ backgroundColor: "transparent" }}>
+                      (C)
+                    </small>
                   </th>
                 </tr>
                 <tr>
@@ -1416,7 +1483,7 @@ export default function RekapMinitokONT() {
               </thead>
 
               <tbody>
-                {(currentTableRows.filter((row) => {
+                {currentTableRows.filter((row) => {
                   const q = searchTerm.trim().toLowerCase();
                   if (!q) return true;
                   return [
@@ -1435,65 +1502,75 @@ export default function RekapMinitokONT() {
                     row.totalONTMinStock,
                     row.totalRetailDelivery,
                     row.totalPremiumDelivery,
-                  ].some((v) => String(v || "").toLowerCase().includes(q));
-                })).length > 0 ? (
-                  currentTableRows.filter((row) => {
-                    const q = searchTerm.trim().toLowerCase();
-                    if (!q) return true;
-                    return [
-                      row.warehouse,
-                      row.totalRetailSB,
-                      row.totalRetailDB,
-                      row.totalPremiumSCMT,
-                      row.totalONTSCMT,
-                      row.totalPremiumGAP,
-                      row.totalONTGAP,
-                      row.totalRetailKebutuhan,
-                      row.totalPremiumKebutuhan,
-                      row.totalONTKebutuhan,
-                      row.totalRetailMinStock,
-                      row.totalPremiumMinStock,
-                      row.totalONTMinStock,
-                      row.totalRetailDelivery,
-                      row.totalPremiumDelivery,
-                    ].some((v) => String(v || "").toLowerCase().includes(q));
-                  }).map((row, i) => (
-                    <tr
-                      key={row.warehouse || i} // Key unik berdasarkan warehouse (hindari React warning)
-                      onClick={() => {
-                        if (selectedLevel === "treg") {
-                          setSelectedTreg(row.warehouse); // Gunakan row.warehouse (fixed dari tableData)
-                          setSelectedLevel("witel");
-                          setSelectedWitel(null);
-                        } else if (selectedLevel === "witel") {
-                          setSelectedWitel(row.warehouse); // Gunakan row.warehouse
-                          setSelectedLevel("ta");
-                        }
-                        // Tidak drill-down untuk level "ta"
-                      }}
-                      style={{ cursor: "pointer" }}
-                    >
-                      <td className="bg-abu fw-bold">
-                        {row.warehouse || "N/A"}
-                      </td>
-                      <td>{row.totalRetailSB || 0}</td>
-                      <td>{row.totalRetailDB || 0}</td>
-                      <td>{row.totalPremiumSCMT || 0}</td>
-                      <td>{row.totalONTSCMT || 0}</td>
-                      <td>{row.totalPremiumGAP || 0}</td>
-                      <td className="bg-success text-white fw-bold">
-                        {row.totalONTGAP || 0}
-                      </td>
-                      <td>{row.totalRetailKebutuhan || 0}</td>
-                      <td>{row.totalPremiumKebutuhan || 0}</td>
-                      <td>{row.totalONTKebutuhan || 0}</td>
-                      <td>{row.totalRetailMinStock || 0}</td>
-                      <td>{row.totalPremiumMinStock || 0}</td>
-                      <td>{row.totalONTMinStock || 0}</td>
-                      <td>{row.totalRetailDelivery || 0}</td>
-                      <td>{row.totalPremiumDelivery || 0}</td>
-                    </tr>
-                  ))
+                  ].some((v) =>
+                    String(v || "")
+                      .toLowerCase()
+                      .includes(q)
+                  );
+                }).length > 0 ? (
+                  currentTableRows
+                    .filter((row) => {
+                      const q = searchTerm.trim().toLowerCase();
+                      if (!q) return true;
+                      return [
+                        row.warehouse,
+                        row.totalRetailSB,
+                        row.totalRetailDB,
+                        row.totalPremiumSCMT,
+                        row.totalONTSCMT,
+                        row.totalPremiumGAP,
+                        row.totalONTGAP,
+                        row.totalRetailKebutuhan,
+                        row.totalPremiumKebutuhan,
+                        row.totalONTKebutuhan,
+                        row.totalRetailMinStock,
+                        row.totalPremiumMinStock,
+                        row.totalONTMinStock,
+                        row.totalRetailDelivery,
+                        row.totalPremiumDelivery,
+                      ].some((v) =>
+                        String(v || "")
+                          .toLowerCase()
+                          .includes(q)
+                      );
+                    })
+                    .map((row, i) => (
+                      <tr
+                        key={row.warehouse || i} // Key unik berdasarkan warehouse (hindari React warning)
+                        onClick={() => {
+                          if (selectedLevel === "treg") {
+                            setSelectedTreg(row.warehouse); // Gunakan row.warehouse (fixed dari tableData)
+                            setSelectedLevel("witel");
+                            setSelectedWitel(null);
+                          } else if (selectedLevel === "witel") {
+                            setSelectedWitel(row.warehouse); // Gunakan row.warehouse
+                            setSelectedLevel("ta");
+                          }
+                          // Tidak drill-down untuk level "ta"
+                        }}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <td className="bg-abu fw-bold">
+                          {row.warehouse || "N/A"}
+                        </td>
+                        -<td>{row.totalRetailSB || 0}</td>
+                        <td>{row.totalRetailDB || 0}</td>
+                        <td>{row.totalPremiumSCMT || 0}</td>
+                        <td>{row.totalONTSCMT || 0}</td>
+                        <td>{row.totalPremiumGAP || 0}</td>
+                        <td className="bg-success text-white fw-bold">
+                          {row.totalONTGAP || 0}
+                        </td>
+                        <td>{row.totalRetailKebutuhan || 0}</td>
+                        <td>{row.totalPremiumKebutuhan || 0}</td>
+                        <td>{row.totalONTKebutuhan || 0}</td>
+                        <td>{row.totalRetailMinStock || 0}</td>
+                        <td>{row.totalPremiumMinStock || 0}</td>
+                        <td>{row.totalONTMinStock || 0}</td>
+                        <td>{row.totalRetailDelivery || 0}</td>
+                        <td>{row.totalPremiumDelivery || 0}</td>
+                      </tr>
+                    ))
                 ) : (
                   <tr>
                     <td colSpan="15" className="text-center py-4">
